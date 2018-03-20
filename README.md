@@ -16,8 +16,8 @@ Goals of the solution:
  * Remove
  * Overlay
 
-There is a presentation from [adaptTo() 2013](http://adaptto.org) with more background information:<br/>
-[Superimposing Content Presentation adaptTo() 2013](http://www.pro-vision.de/content/medialib/pro-vision/production/adaptto/2013/adaptto2013-lightning-superimposing-content-julian-sedding-stefa/_jcr_content/renditions/rendition.file/adaptto2013-lightning-superimposing-content-julian-sedding-stefan-seifert.pdf)
+There is a presentation from [adaptTo() 2013](https://adapt.to) with more background information:<br/>
+[Superimposing Content Presentation adaptTo() 2013](https://adapt.to/content/dam/adaptto/production/presentations/2013/adaptto2013-lightning-superimposing-content-julian-sedding-stefan-seifert.pdf/_jcr_content/renditions/original./adaptto2013-lightning-superimposing-content-julian-sedding-stefan-seifert.pdf)
 
 The implementation of this provider is based on the great work of Julian Sedding from [SLING-1778](https://issues.apache.org/jira/browse/SLING-1778).
 
@@ -56,7 +56,7 @@ In the Felix console you can configure the creation of Superimposing Resource Pr
 
 ## Comparison with Sling Resource Merger
 
-In Sling Contrib a ["Apache Sling Resource Merger"](https://svn.apache.org/repos/asf/sling/trunk/contrib/extensions/resourcemerger) bundle is provided. Although both Sling Resource Merger and the Superimposing Resource Provider take care of mirroring and merging resources they solve quite different problems and have different usecases:
+In Sling Contrib a ["Apache Sling Resource Merger"](https://github.com/apache/sling-org-apache-sling-resourcemerger) bundle is provided. Although both Sling Resource Merger and the Superimposing Resource Provider take care of mirroring and merging resources they solve quite different problems and have different usecases:
 
 * Sling Resource Merger is primary about Merging resources of content structures from /apps and /libs, e.g. dialog definitions of an CMS application. It mounts the merged resources at a new path (e.g. /mnt/overlay) which can be included in the script resolution.
 * The Superimposing Content Resource Provider is targeted at content. Think of a scenario with one master site that is rolled out to hundreds of slave sites with mostly identical contents but some site-specific overrides and customizations. This is not possible with Sling Resource Merger and vice versa.

@@ -19,27 +19,31 @@ package org.apache.sling.superimposing.impl;
 import java.util.Dictionary;
 import java.util.Hashtable;
 import java.util.Iterator;
+import java.util.Map;
+import java.util.Objects;
 
 import javax.jcr.RepositoryException;
 import javax.jcr.Session;
-import javax.servlet.http.HttpServletRequest;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.sling.api.resource.PersistenceException;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceWrapper;
+import org.apache.sling.spi.resource.provider.ResolveContext;
+import org.apache.sling.spi.resource.provider.ResourceContext;
+import org.apache.sling.spi.resource.provider.ResourceProvider;
 import org.apache.sling.superimposing.SuperimposingResourceProvider;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Constants;
 import org.osgi.framework.ServiceRegistration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 /**
  * Superimposing resource provider.
  * Maps a single source path to the target root path, with or without overlay depending on configuration.
  */
-public class SuperimposingResourceProviderImpl implements SuperimposingResourceProvider {
+public class SuperimposingResourceProviderImpl extends ResourceProvider<Object> implements SuperimposingResourceProvider {
 
     private static final Logger log = LoggerFactory.getLogger(SuperimposingResourceProviderImpl.class);
 
@@ -49,7 +53,7 @@ public class SuperimposingResourceProviderImpl implements SuperimposingResourceP
     private final String sourcePathPrefix;
     private final boolean overlayable;
     private final String toString;
-    private ServiceRegistration registration;
+    private ServiceRegistration<?> registration;
 
     SuperimposingResourceProviderImpl(String rootPath, String sourcePath, boolean overlayable) {
         this.rootPath = rootPath;
@@ -64,12 +68,31 @@ public class SuperimposingResourceProviderImpl implements SuperimposingResourceP
         this.toString = sb.toString();
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    public Resource getResource(ResourceResolver resolver, HttpServletRequest httpServletRequest, String path) {
-        return getResource(resolver, path);
-    }
+	@SuppressWarnings("rawtypes")
+	@Override
+	public Resource getResource(ResolveContext<Object> ctx, String path, ResourceContext resourceContext,
+			Resource parent) {
+		Resource candidate =  getResource(ctx.getResourceResolver(), path);
+		if(candidate == null) {
+			ResourceProvider<?> parentProvider = ctx.getParentResourceProvider();
+			ResolveContext parentCtx = ctx.getParentResolveContext();
+			// Ask the parent provider
+			if (parentProvider != null) {
+				return parentProvider.getResource(parentCtx, path, resourceContext, parent);
+			}
+		}
+		return candidate;
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public Iterator<Resource> listChildren(ResolveContext<Object> ctx, Resource parent) {
+		Iterator<Resource> children = listChildren(parent);
+        if (children == null && ctx.getParentResourceProvider() != null) {
+            children = ctx.getParentResourceProvider().listChildren((ResolveContext) ctx.getParentResolveContext(), parent);
+        }
+		return children;
+	}
 
     /**
      * {@inheritDoc}
@@ -80,7 +103,7 @@ public class SuperimposingResourceProviderImpl implements SuperimposingResourceP
             // the existing resource where the superimposed content is retrieved from
             final Resource mappedResource = resolver.getResource(mappedPath);
             if (null != mappedResource) {
-                return new SuperimposingResource(mappedResource, path);
+                return new SuperimposingResource(mappedResource, path, mappedPath);
             }
         }
         return null;
@@ -122,7 +145,7 @@ public class SuperimposingResourceProviderImpl implements SuperimposingResourceP
             return mapPathWithOverlay(provider, resolver, path);
         }
         else {
-            return mapPathWithoutOverlay(provider, resolver, path);
+            return mapPathWithoutOverlay(provider, path);
         }
     }
 
@@ -136,7 +159,7 @@ public class SuperimposingResourceProviderImpl implements SuperimposingResourceP
     static String mapPathWithOverlay(SuperimposingResourceProviderImpl provider, ResourceResolver resolver, String path) {
         if (StringUtils.equals(path, provider.rootPath)) {
             // Superimposing root path cannot be overlayed
-            return mapPathWithoutOverlay(provider, resolver, path);
+            return mapPathWithoutOverlay(provider, path);
         }
         else if (StringUtils.startsWith(path, provider.rootPrefix)) {
             if (hasOverlayResource(resolver, path)) {
@@ -145,7 +168,7 @@ public class SuperimposingResourceProviderImpl implements SuperimposingResourceP
             }
             else {
                 // overlay item does not exist, overlay cannot be applied, fallback to mapped path without overlay
-                return mapPathWithoutOverlay(provider, resolver, path);
+                return mapPathWithoutOverlay(provider, path);
             }
         }
         return null;
@@ -169,7 +192,7 @@ public class SuperimposingResourceProviderImpl implements SuperimposingResourceP
      * @param path Path to map
      * @return Mapped path or null if no mapping available
      */
-    static String mapPathWithoutOverlay(SuperimposingResourceProviderImpl provider, ResourceResolver resolver, String path) {
+    static String mapPathWithoutOverlay(SuperimposingResourceProviderImpl provider, String path) {
         final String mappedPath;
         if (StringUtils.equals(path, provider.rootPath)) {
             mappedPath = provider.sourcePath;
@@ -199,17 +222,55 @@ public class SuperimposingResourceProviderImpl implements SuperimposingResourceP
         }
         return mappedPath;
     }
+    
+	public Resource create(final ResolveContext<Object> ctx, final String path, final Map<String, Object> properties)
+			throws PersistenceException {
+		Resource createdResource = null;
+		if (ctx.getParentResourceProvider() != null) {
+			createdResource = ctx.getParentResourceProvider().create((ResolveContext) ctx.getParentResolveContext(),
+					path, properties);
+		}
+		return createdResource;
+	}
 
-    //---------- Service Registration
+	@Override
+	public void delete(final ResolveContext<Object> ctx, final Resource resource) throws PersistenceException {
+		if (ctx.getParentResourceProvider() != null) {
+			ctx.getParentResourceProvider().delete((ResolveContext) ctx.getParentResolveContext(), resource);
+		}
+	}
+
+	@Override
+	public void revert(final ResolveContext<Object> ctx) {
+		if (ctx.getParentResourceProvider() != null) {
+			ctx.getParentResourceProvider().revert((ResolveContext) ctx.getParentResolveContext());
+		}
+	}
+
+	@Override
+	public void commit(final ResolveContext<Object> ctx) throws PersistenceException {
+		if (ctx.getParentResourceProvider() != null) {
+			ctx.getParentResourceProvider().commit((ResolveContext) ctx.getParentResolveContext());
+		}
+	}
+
+	@Override
+	public boolean hasChanges(final ResolveContext<Object> ctx) {
+		if (ctx.getParentResourceProvider() != null) {
+			ctx.getParentResourceProvider().hasChanges((ResolveContext) ctx.getParentResolveContext());
+		}
+		return false;
+	}
+
+    /************** Service Registration********************/
 
     void registerService(BundleContext context) {
-        final Dictionary<String, Object> props = new Hashtable<String, Object>();
+        final Dictionary<String, Object> props = new Hashtable<>();
         props.put(Constants.SERVICE_DESCRIPTION, "Provider of superimposed resources");
         props.put(Constants.SERVICE_VENDOR, "The Apache Software Foundation");
-        props.put(ROOTS, new String[]{rootPath});
-
-        registration = context.registerService(SERVICE_NAME, this, props);
-
+        props.put(PROPERTY_ROOT, new String[]{rootPath});
+        props.put(PROPERTY_MODIFIABLE, true); 
+        registration = context.registerService(ResourceProvider.class, this, props);
         log.info("Registered {}", this);
     }
 
@@ -242,7 +303,18 @@ public class SuperimposingResourceProviderImpl implements SuperimposingResourceP
         return overlayable;
     }
 
-    @Override
+    /* (non-Javadoc)
+	 * @see java.lang.Object#hashCode()
+	 */
+	@Override
+	public int hashCode() {
+		return Objects.hash(rootPath);
+	}
+
+	/* (non-Javadoc)
+	 * @see java.lang.Object#equals(java.lang.Object)
+	 */
+	@Override
     public boolean equals(Object o) {
         if (o instanceof SuperimposingResourceProviderImpl) {
             final SuperimposingResourceProviderImpl srp = (SuperimposingResourceProviderImpl)o;
@@ -256,4 +328,5 @@ public class SuperimposingResourceProviderImpl implements SuperimposingResourceP
     public String toString() {
         return toString;
     }
+
 }

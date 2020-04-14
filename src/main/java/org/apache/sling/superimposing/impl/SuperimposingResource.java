@@ -29,8 +29,11 @@ public class SuperimposingResource extends AbstractResource implements Resource 
 
     private final Resource resource;
     private final ResourceMetadata resourceMetadata;
-    private final String path;
-
+    private final String path;    
+    private final String superimposingPath;
+    
+    private static final String SUPERIMPOSING_SOURCEPATH_CHILD_IDENTIFIER = "SUPERIMPOSING_SOURCEPATH_CHILD_IDENTIFIER";
+    
     /**
      * @param mappedResource Mapped resource
      * @param path Path
@@ -45,10 +48,45 @@ public class SuperimposingResource extends AbstractResource implements Resource 
         }
 
         this.path = path;
+        this.superimposingPath = null;
+    }
+
+    /**
+     * @param mappedResource Mapped resource
+     * @param path Path
+     */
+    public SuperimposingResource(Resource mappedResource, String path, String superimposingPath) {
+        this.resource = mappedResource;
+        mappedResource.getResourceSuperType();
+        // make a copy of resource metadata object
+        this.resourceMetadata = new ResourceMetadata();
+        if (mappedResource.getResourceMetadata()!=null) {
+            this.resourceMetadata.putAll(mappedResource.getResourceMetadata());
+        }
+
+        this.path = path;
+        this.superimposingPath = superimposingPath;
+        
+    }    
+    
+    
+    
+    @Override
+    public Resource getChild(String relPath) {
+    	if(SUPERIMPOSING_SOURCEPATH_CHILD_IDENTIFIER.equals(relPath)){
+    		ResourceResolver resolver =  this.resource.getResourceResolver();
+    		return resolver.getResource(this.superimposingPath);
+    	} else {
+    		return super.getChild(relPath);
+    	}
     }
 
     public String getPath() {
         return this.path;
+    }
+    
+    public String getSuperimposingPath(){
+    	return this.getSuperimposingPath();
     }
 
     public String getResourceType() {
@@ -80,13 +118,16 @@ public class SuperimposingResource extends AbstractResource implements Resource 
     Resource getResource() {
         return this.resource;
     }
+    
+    
 
     @Override
     public String toString() {
-        return new StringBuilder(getClass().getSimpleName())
+        /*return new StringBuilder(getClass().getSimpleName())
                 .append("[type=").append(getResourceType())
                 .append(", path=").append(getPath())
-                .append(", resource=[").append(getResource()).append("]]").toString();
+                .append(", resource=[").append(getResource()).append("]]").toString();*/
+    	return this.superimposingPath;
     }
 
 }

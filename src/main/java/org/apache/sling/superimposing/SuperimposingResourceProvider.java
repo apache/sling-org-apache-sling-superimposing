@@ -16,13 +16,12 @@
  */
 package org.apache.sling.superimposing;
 
-import org.apache.sling.api.resource.ResourceProvider;
 
 /**
  * Superimposing resource provider.
  * Maps a single source path to the target root path, with or without overlay depending on configuration.
  */
-public interface SuperimposingResourceProvider extends ResourceProvider {
+public interface SuperimposingResourceProvider {
 
     /**
      * Mixin for superimposing.

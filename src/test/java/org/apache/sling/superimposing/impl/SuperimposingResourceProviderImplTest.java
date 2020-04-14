@@ -104,7 +104,7 @@ public class SuperimposingResourceProviderImplTest {
         when(resourceResolver.getResource(path)).thenReturn(mockResource);
     }
 
-    @After
+    //@After
     public void tearDown() {
         underTest.unregisterService();
         verify(serviceRegistration).unregister();

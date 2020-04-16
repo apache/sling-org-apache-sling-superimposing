@@ -18,21 +18,10 @@
  */
 package org.apache.sling.superimposing.impl;
 
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
-
-import java.util.Arrays;
-import java.util.Dictionary;
-import java.util.Iterator;
-
-import javax.jcr.RepositoryException;
-import javax.jcr.Session;
-
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceMetadata;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceWrapper;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -42,6 +31,23 @@ import org.mockito.runners.MockitoJUnitRunner;
 import org.mockito.stubbing.Answer;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceRegistration;
+
+import javax.jcr.RepositoryException;
+import javax.jcr.Session;
+import java.util.Arrays;
+import java.util.Dictionary;
+import java.util.Iterator;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
 public class SuperimposingResourceProviderImplTest {

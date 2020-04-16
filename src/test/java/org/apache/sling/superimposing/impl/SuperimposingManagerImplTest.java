@@ -18,6 +18,44 @@
  */
 package org.apache.sling.superimposing.impl;
 
+import org.apache.commons.collections4.IteratorUtils;
+import org.apache.sling.api.resource.LoginException;
+import org.apache.sling.api.resource.Resource;
+import org.apache.sling.api.resource.ResourceResolver;
+import org.apache.sling.api.resource.ResourceResolverFactory;
+import org.apache.sling.api.resource.ResourceUtil;
+import org.apache.sling.api.resource.ValueMap;
+import org.apache.sling.api.wrappers.ValueMapDecorator;
+import org.apache.sling.superimposing.SuperimposingManager;
+import org.apache.sling.superimposing.SuperimposingResourceProvider;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.Answers;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.runners.MockitoJUnitRunner;
+import org.mockito.stubbing.Answer;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.ServiceRegistration;
+import org.osgi.service.component.ComponentContext;
+
+import javax.jcr.PathNotFoundException;
+import javax.jcr.Property;
+import javax.jcr.RepositoryException;
+import javax.jcr.Session;
+import javax.jcr.observation.Event;
+import javax.jcr.observation.EventIterator;
+import javax.jcr.observation.EventListener;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Dictionary;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+
 import static org.apache.sling.superimposing.SuperimposingResourceProvider.PROP_SUPERIMPOSE_OVERLAYABLE;
 import static org.apache.sling.superimposing.SuperimposingResourceProvider.PROP_SUPERIMPOSE_REGISTER_PARENT;
 import static org.apache.sling.superimposing.SuperimposingResourceProvider.PROP_SUPERIMPOSE_SOURCE_PATH;
@@ -36,47 +74,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Dictionary;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-
-import javax.jcr.PathNotFoundException;
-import javax.jcr.Property;
-import javax.jcr.RepositoryException;
-import javax.jcr.Session;
-import javax.jcr.observation.Event;
-import javax.jcr.observation.EventIterator;
-import javax.jcr.observation.EventListener;
-
-import org.apache.commons.collections4.IteratorUtils;
-import org.apache.sling.api.resource.LoginException;
-import org.apache.sling.api.resource.Resource;
-import org.apache.sling.api.resource.ResourceResolver;
-import org.apache.sling.api.resource.ResourceResolverFactory;
-import org.apache.sling.api.resource.ResourceUtil;
-import org.apache.sling.api.resource.ValueMap;
-import org.apache.sling.api.wrappers.ValueMapDecorator;
-import org.apache.sling.superimposing.SuperimposingManager;
-import org.apache.sling.superimposing.SuperimposingResourceProvider;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.Answers;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.runners.MockitoJUnitRunner;
-import org.mockito.stubbing.Answer;
-import org.osgi.framework.BundleContext;
-import org.osgi.framework.ServiceRegistration;
-import org.osgi.service.component.ComponentContext;
 
 @RunWith(MockitoJUnitRunner.class)
 public class SuperimposingManagerImplTest {
@@ -112,7 +109,6 @@ public class SuperimposingManagerImplTest {
         when(componentContext.getBundleContext()).thenReturn(bundleContext);
         when(componentContext.getProperties()).thenReturn(componentContextProperties);
         when(componentContextProperties.get(SuperimposingManagerImpl.OBSERVATION_PATHS_PROPERTY)).thenReturn(new String[] { OBSERVATION_PATH });
-        when(resourceResolverFactory.getAdministrativeResourceResolver(any(Map.class))).thenReturn(resourceResolver);
         when(resourceResolver.adaptTo(Session.class)).thenReturn(session);
 
         // collect a list of all service registrations to validate that they are all unregistered on shutdown
@@ -182,7 +178,6 @@ public class SuperimposingManagerImplTest {
     private void initialize(boolean enabled) throws InterruptedException, LoginException, RepositoryException {
         when(config.observationPaths()).thenReturn(new String[]{OBSERVATION_PATH});
         when(config.enabled()).thenReturn(true);
-        //underTest = new SuperimposingManagerImpl().withResourceResolverFactory(resourceResolverFactory);
         underTest.activate();
 
         if (underTest.isEnabled()) {
@@ -195,7 +190,7 @@ public class SuperimposingManagerImplTest {
         }
     }
 
-    //@After
+    @After
     public void tearDown() throws RepositoryException {
         underTest.deactivate(componentContext);
 
@@ -242,7 +237,6 @@ public class SuperimposingManagerImplTest {
     @SuppressWarnings("unchecked")
     @Test
     public void testFindAllSuperimposings() throws InterruptedException, LoginException, RepositoryException {
-        initialize(true);
         // prepare a query that returns one existing superimposed resource
         when(resourceResolver.findResources(QUERY, QUERY_TYPE)).then(new Answer<Iterator<Resource>>() {
             public Iterator<Resource> answer(InvocationOnMock invocation) {
@@ -251,6 +245,7 @@ public class SuperimposingManagerImplTest {
                 }).iterator();
             }
         });
+        initialize(true);
 
         // ensure the superimposed resource is detected and registered
         List<SuperimposingResourceProvider> providers = IteratorUtils.toList(underTest.getRegisteredProviders());
@@ -259,7 +254,7 @@ public class SuperimposingManagerImplTest {
         assertEquals(SUPERIMPOSED_PATH, provider.getRootPath());
         assertEquals(ORIGINAL_PATH, provider.getSourcePath());
         assertFalse(provider.isOverlayable());
-        verify(bundleContext).registerService(anyString(), same(provider), any(Dictionary.class));
+        verify(bundleContext).registerService(any(Class.class), same(provider), any(Dictionary.class));
     }
 
     private EventIterator prepareNodeCreateEvent(Resource pResource) throws RepositoryException {
@@ -361,7 +356,7 @@ public class SuperimposingManagerImplTest {
 
     @SuppressWarnings("unchecked")
     @Test
-    public void testSuperimposedResourceCreateMove() throws InterruptedException, LoginException, RepositoryException {
+    public void testSuperimposedResourceCreateMove() throws InterruptedException, LoginException, RepositoryException, ClassNotFoundException {
         initialize(true);
 
         // simulate node create event
@@ -390,7 +385,7 @@ public class SuperimposingManagerImplTest {
         assertEquals("/new/path", provider.getRootPath());
         assertEquals(ORIGINAL_PATH, provider.getSourcePath());
         assertFalse(provider.isOverlayable());
-        //verify(bundleContext).registerService(anyString(), same(provider), any(Dictionary.class));
+        verify(bundleContext).registerService(any(Class.class), same(provider), any(Dictionary.class));
     }
 
 }

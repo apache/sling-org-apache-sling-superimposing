@@ -292,16 +292,14 @@ public class SuperimposingManagerImpl implements SuperimposingManager, EventList
                             true); // noLocal
                 }
             }
-
-            // register all superimposing definitions that already exist
-            initialization = Executors.newSingleThreadExecutor().submit(() -> {
-            	try {
-                    registerAllSuperimposings();
-                }
-                catch (Exception ex) {
-                    log.warn("Error registering existing superimposing resources on service startup.", ex);
-                }
-            });
+        // register all superimposing definitions that already exist
+        initialization = Executors.newSingleThreadExecutor().submit(() -> {
+            try {
+                registerAllSuperimposings();
+            } catch (Exception ex) {
+                log.warn("Error registering existing superimposing resources on service startup.", ex);
+            }
+        });
     }
 
     @Deactivate

@@ -110,15 +110,6 @@ public class SuperimposingResourceProviderImplTest {
         when(resourceResolver.getResource(path)).thenReturn(mockResource);
     }
 
-    //@After
-    public void tearDown() {
-        underTest.unregisterService();
-        verify(serviceRegistration).unregister();
-
-        underTestOverlay.unregisterService();
-        verify(serviceRegistrationOverlay).unregister();
-    }
-
     @Test
     public void testGetter() {
         assertEquals(SUPERIMPOSED_PATH, underTest.getRootPath());

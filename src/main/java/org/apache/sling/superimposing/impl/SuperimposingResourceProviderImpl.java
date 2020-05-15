@@ -307,7 +307,7 @@ public class SuperimposingResourceProviderImpl extends ResourceProvider<Object> 
 	 */
 	@Override
 	public int hashCode() {
-		return Objects.hash(rootPath);
+		return rootPath.hashCode();
 	}
 
 	/* (non-Javadoc)

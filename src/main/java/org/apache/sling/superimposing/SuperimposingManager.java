@@ -31,7 +31,7 @@ import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 public interface SuperimposingManager {
 	
 	String OBSERVATION_PATHS_PROPERTY = "observationPaths";
-    String OBSERVATION_PATHS_DEFAULT = "/content/vw_pkw/dealers";
+    String OBSERVATION_PATHS_DEFAULT = "/content";
 	
 	@ObjectClassDefinition(name = "Apache Sling Superimposing Resource Manager", description = "Manages the resource registrations for the Superimposing Resource Provider.")
 	public @interface Config {

@@ -123,10 +123,6 @@ public class SuperimposingResource extends AbstractResource implements Resource 
 
     @Override
     public String toString() {
-        /*return new StringBuilder(getClass().getSimpleName())
-                .append("[type=").append(getResourceType())
-                .append(", path=").append(getPath())
-                .append(", resource=[").append(getResource()).append("]]").toString();*/
     	return this.superimposingPath;
     }
 

@@ -51,22 +51,6 @@
             <plugin>
                 <groupId>biz.aQute.bnd</groupId>
                 <artifactId>bnd-maven-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>bnd-process</id>
-                        <goals>
-                            <goal>bnd-process</goal>
-                        </goals>
-                        <configuration>
-                            <bnd>
-                                Export-Package: org.apache.sling.superimposing
-                                Private-Package: org.apache.sling.superimposing.impl
-                                DynamicImport-Package: org.apache.felix.webconsole
-                                Sling-Nodetypes: SLING-INF/nodetypes/superimposing.cnd
-                            </bnd>
-                        </configuration>
-                    </execution>
-                </executions>
             </plugin>
             <plugin>
                 <groupId>biz.aQute.bnd</groupId>
@@ -110,7 +94,6 @@
 			<artifactId>commons-collections4</artifactId>
             <version>4.1</version>
 		</dependency>
-
         <!-- OSGi Dependencies -->
 		<dependency>
 		    <groupId>org.osgi</groupId>
@@ -167,15 +150,12 @@
             <artifactId>junit</artifactId>
             <scope>test</scope>
         </dependency>
-
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-all</artifactId>
             <version>1.9.5</version>
             <scope>test</scope>
         </dependency>
-
-
     </dependencies>
 
 </project>

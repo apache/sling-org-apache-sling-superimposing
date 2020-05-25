@@ -54,6 +54,6 @@ public interface SuperimposingManager {
      *   Iterator is backed by a {@link java.util.concurrent.ConcurrentHashMap} and is safe to access
      *   even if superimposing resource providers are registered or unregistered at the same time.
      */
-    Iterator<SuperimposingResourceProviderImpl> getRegisteredProviders();
+    Iterator<SuperimposingResourceProvider> getRegisteredProviders();
 
 }

@@ -31,6 +31,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.stream.Collectors;
 
 import javax.jcr.RepositoryException;
 import javax.jcr.Session;
@@ -47,6 +48,7 @@ import org.apache.sling.api.resource.ResourceResolverFactory;
 import org.apache.sling.api.resource.ResourceUtil;
 import org.apache.sling.serviceusermapping.ServiceUserMapped;
 import org.apache.sling.superimposing.SuperimposingManager;
+import org.apache.sling.superimposing.SuperimposingResourceProvider;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.FrameworkUtil;
 import org.osgi.service.component.ComponentContext;
@@ -398,8 +400,10 @@ public class SuperimposingManagerImpl implements SuperimposingManager, EventList
      *   Iterator is backed by a {@link ConcurrentHashMap} and is safe to access
      *   even if superimposing resource providers are registered or unregistered at the same time.
      */
-    public Iterator<SuperimposingResourceProviderImpl> getRegisteredProviders() {
-        return IteratorUtils.unmodifiableIterator(superimposingProviders.values().iterator());
+    public Iterator<SuperimposingResourceProvider> getRegisteredProviders() {
+        List<SuperimposingResourceProvider> resourceProviders = superimposingProviders.values().stream()
+                .map(srp -> (SuperimposingResourceProvider)srp).collect(Collectors.toList());
+        return IteratorUtils.unmodifiableIterator(resourceProviders.iterator());
     }
 
     SuperimposingManagerImpl withResourceResolverFactory(ResourceResolverFactory resolverFactory) {

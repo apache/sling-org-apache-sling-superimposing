@@ -82,7 +82,6 @@ public class SuperimposingManagerImpl implements SuperimposingManager, EventList
 
     private String[] observationPaths;
     private EventListener[] observationEventListeners;
-    
     private String queryTemplate = "SELECT * FROM [" + MIXIN_SUPERIMPOSE + "] WHERE ISDESCENDANTNODE('$path')";
 
     /**
@@ -152,7 +151,7 @@ public class SuperimposingManagerImpl implements SuperimposingManager, EventList
         }
 
         final long time = System.currentTimeMillis() - start;
-        log.info("Registered {} SuperimposingResourceProvider(s) in {} ms, skipping {} invalid one(s).", countSuccess, time);
+        log.info("Registered {} SuperimposingResourceProvider(s) in {} ms, skipping {} invalid one(s).", countSuccess, time, countFailed);
     }
 
     /**

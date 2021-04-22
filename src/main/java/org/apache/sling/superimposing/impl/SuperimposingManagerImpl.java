@@ -22,7 +22,6 @@ import static org.apache.sling.superimposing.SuperimposingResourceProvider.PROP_
 import static org.apache.sling.superimposing.SuperimposingResourceProvider.PROP_SUPERIMPOSE_SOURCE_PATH;
 
 import java.util.ArrayList;
-import java.util.Dictionary;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -39,13 +38,12 @@ import javax.jcr.observation.EventIterator;
 import javax.jcr.observation.EventListener;
 
 import org.apache.commons.collections.IteratorUtils;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.resource.LoginException;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceResolverFactory;
 import org.apache.sling.api.resource.ResourceUtil;
-import org.apache.sling.commons.osgi.PropertiesUtil;
 import org.apache.sling.superimposing.SuperimposingManager;
 import org.apache.sling.superimposing.SuperimposingResourceProvider;
 import org.osgi.framework.BundleContext;
@@ -69,6 +67,9 @@ import org.slf4j.LoggerFactory;
 @Designate(ocd = SuperimposingManagerImpl.SuperimposingManagerConfig.class)
 public class SuperimposingManagerImpl implements SuperimposingManager, EventListener {
 
+    static final String FIND_ALL_QUERIES_DEFAULT = "JCR-SQL2|SELECT * FROM [" + MIXIN_SUPERIMPOSE + "] WHERE ISDESCENDANTNODE('/content')";
+    static final String OBSERVATION_PATHS_DEFAULT = "/content";
+
     @ObjectClassDefinition(name = "Apache Sling Superimposing Resource Manager", description = "Manages the resource registrations for the Superimposing Resource Provider")
     public @interface SuperimposingManagerConfig {
 
@@ -77,11 +78,10 @@ public class SuperimposingManagerImpl implements SuperimposingManager, EventList
 
         @AttributeDefinition(name = "Find all Queries", description = "List of query expressions to find all existing superimposing registrations on service startup. "
                 + "Query syntax is depending on underlying resource provdider implementation. Prepend the query with query syntax name separated by \"|\".")
-        String[] findAllQueries() default {
-                "JCR-SQL2|SELECT * FROM [" + MIXIN_SUPERIMPOSE + "] WHERE ISDESCENDANTNODE('/content')" };
+        String[] findAllQueries() default { FIND_ALL_QUERIES_DEFAULT };
 
         @AttributeDefinition(name = "Obervation paths", description = "List of paths that should be monitored for resource events to detect superimposing content nodes")
-        String[] observationPaths() default { "/content" };
+        String[] observationPaths() default { OBSERVATION_PATHS_DEFAULT };
     }
 
     private boolean enabled;
@@ -120,10 +120,9 @@ public class SuperimposingManagerImpl implements SuperimposingManager, EventList
     private static final Logger log = LoggerFactory.getLogger(SuperimposingManagerImpl.class);
 
 
-    public SuperimposingManagerImpl(@Reference
-    private ResourceResolverFactory resolverFactory){
-
-    }
+//    public SuperimposingManagerImpl(ResourceResolverFactory resolverFactory){
+//
+//    }
 
 
     /**
@@ -279,25 +278,23 @@ public class SuperimposingManagerImpl implements SuperimposingManager, EventList
     // ---------- SCR Integration
 
     @Activate
-    protected synchronized void activate(final ComponentContext ctx) throws LoginException, RepositoryException {
-
+    protected synchronized void activate(BundleContext bundleContext, SuperimposingManagerConfig configuration)
+        throws LoginException, RepositoryException
+    {
+        this.bundleContext = bundleContext;
         // check enabled state
-        @SuppressWarnings("unchecked")
-        final Dictionary<String, Object> props = ctx.getProperties();
-        this.enabled = PropertiesUtil.toBoolean(props.get(ENABLED_PROPERTY), ENABLED_DEFAULT);
+        this.enabled = configuration.enabled();
         log.debug("Config: " + "Enabled={} ", enabled);
         if (!isEnabled()) {
             return;
         }
 
         // get "find all" queries
-        this.findAllQueries = PropertiesUtil.toStringArray(props.get(FINDALLQUERIES_PROPERTY),
-                new String[] { FINDALLQUERIES_DEFAULT });
-        this.obervationPaths = PropertiesUtil.toStringArray(props.get(OBSERVATION_PATHS_PROPERTY),
-                new String[] { OBSERVATION_PATHS_DEFAULT });
+        this.findAllQueries = configuration.findAllQueries();
+        this.obervationPaths = configuration.observationPaths();
 
         if (null == resolver) {
-            bundleContext = ctx.getBundleContext();
+            //TODO: Migrate this to a Service Resource Resolver
             resolver = resolverFactory.getAdministrativeResourceResolver(null);
 
             // Watch for events on the root to register/deregister superimposings at runtime

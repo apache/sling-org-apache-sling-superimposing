@@ -21,11 +21,13 @@ package org.apache.sling.superimposing.impl;
 import static org.apache.sling.superimposing.SuperimposingResourceProvider.PROP_SUPERIMPOSE_OVERLAYABLE;
 import static org.apache.sling.superimposing.SuperimposingResourceProvider.PROP_SUPERIMPOSE_REGISTER_PARENT;
 import static org.apache.sling.superimposing.SuperimposingResourceProvider.PROP_SUPERIMPOSE_SOURCE_PATH;
+import static org.apache.sling.superimposing.impl.SuperimposingManagerImpl.FIND_ALL_QUERIES_DEFAULT;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Dictionary;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -49,6 +51,7 @@ import org.apache.sling.api.resource.ResourceUtil;
 import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.wrappers.ValueMapDecorator;
 import org.apache.sling.superimposing.SuperimposingResourceProvider;
+import org.apache.sling.superimposing.impl.SuperimposingManagerImpl.SuperimposingManagerConfig;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -77,6 +80,9 @@ public class SuperimposingManagerImplTest {
     private ResourceResolver resourceResolver;
     @Mock(answer=Answers.RETURNS_DEEP_STUBS)
     private Session session;
+    @Mock
+    private SuperimposingManagerConfig configuration;
+
     private List<ServiceRegistration> serviceRegistrations = new ArrayList<ServiceRegistration>();
 
     private SuperimposingManagerImpl underTest;
@@ -88,9 +94,9 @@ public class SuperimposingManagerImplTest {
     @SuppressWarnings("unchecked")
     @Before
     public void setUp() throws LoginException {
-        when(componentContext.getBundleContext()).thenReturn(bundleContext);
-        when(componentContext.getProperties()).thenReturn(componentContextProperties);
-        when(componentContextProperties.get(SuperimposingManagerImpl.OBSERVATION_PATHS_PROPERTY)).thenReturn(new String[] { OBSERVATION_PATH });
+        when(configuration.enabled()).thenReturn(true);
+        when(configuration.findAllQueries()).thenReturn(new String[] {FIND_ALL_QUERIES_DEFAULT});
+        when(configuration.observationPaths()).thenReturn(new String[] {OBSERVATION_PATH});
         when(resourceResolverFactory.getAdministrativeResourceResolver(any(Map.class))).thenReturn(resourceResolver);
         when(resourceResolver.adaptTo(Session.class)).thenReturn(session);
 
@@ -159,10 +165,17 @@ public class SuperimposingManagerImplTest {
     }
 
     private void initialize(boolean enabled) throws InterruptedException, LoginException, RepositoryException {
-        when(componentContextProperties.get(SuperimposingManagerImpl.ENABLED_PROPERTY)).thenReturn(enabled);
+        this.initialize(enabled, true);
+    }
+
+    private void initialize(boolean enabled, boolean createDefaultFind) throws InterruptedException, LoginException, RepositoryException {
+        when(configuration.enabled()).thenReturn(enabled);
+        if(createDefaultFind) {
+            when(resourceResolver.findResources(anyString(), anyString())).thenReturn(Collections.emptyIterator());
+        }
 
         underTest = new SuperimposingManagerImpl().withResourceResolverFactory(resourceResolverFactory);
-        underTest.activate(componentContext);
+        underTest.activate(bundleContext, configuration);
 
         if (underTest.isEnabled()) {
             // verify observation registration
@@ -222,7 +235,7 @@ public class SuperimposingManagerImplTest {
     @Test
     public void testFindAllSuperimposings() throws InterruptedException, LoginException, RepositoryException {
         // prepare a query that returns one existing superimposed resource
-        when(componentContextProperties.get(SuperimposingManagerImpl.FINDALLQUERIES_PROPERTY)).thenReturn("syntax|query");
+        when(configuration.findAllQueries()).thenReturn(new String[] {"syntax|query"});
         when(resourceResolver.findResources("query", "syntax")).then(new Answer<Iterator<Resource>>() {
             public Iterator<Resource> answer(InvocationOnMock invocation) {
                 return Arrays.asList(new Resource[] {
@@ -230,7 +243,7 @@ public class SuperimposingManagerImplTest {
                 }).iterator();
             }
         });
-        initialize(true);
+        initialize(true, false);
 
         // ensure the superimposed resource is detected and registered
         List<SuperimposingResourceProvider> providers = IteratorUtils.toList(underTest.getRegisteredProviders());
@@ -344,7 +357,7 @@ public class SuperimposingManagerImplTest {
     @SuppressWarnings("unchecked")
     @Test
     public void testSuperimposedResourceCreateMove() throws InterruptedException, LoginException, RepositoryException {
-        when(componentContextProperties.get(SuperimposingManagerImpl.FINDALLQUERIES_PROPERTY)).thenReturn("syntax|query");
+        when(configuration.findAllQueries()).thenReturn(new String[] {"syntax|query"});
         initialize(true);
 
         // simulate node create event

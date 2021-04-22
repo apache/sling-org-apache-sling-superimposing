@@ -4,6 +4,7 @@
 .metadata
 .project
 .settings
+.vscode/
 .externalToolBuilders
 maven-eclipse.xml
 *.swp

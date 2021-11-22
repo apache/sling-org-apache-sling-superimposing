@@ -76,7 +76,7 @@ public class SuperimposingManagerImplTest {
     @Mock
     private ResourceResolverFactory resourceResolverFactory;
     @Mock
-    private SuperimposingManager.Config config;
+    private SuperimposingManagerImpl.Config config;
     @Mock
     private ResourceResolver resourceResolver;
     @Mock(answer=Answers.RETURNS_DEEP_STUBS)
@@ -95,7 +95,7 @@ public class SuperimposingManagerImplTest {
     public void setUp() throws LoginException {
         when(componentContext.getBundleContext()).thenReturn(bundleContext);
         when(componentContext.getProperties()).thenReturn(componentContextProperties);
-        when(componentContextProperties.get(SuperimposingManagerImpl.OBSERVATION_PATHS_PROPERTY)).thenReturn(new String[] { OBSERVATION_PATH });
+        when(componentContextProperties.get(SuperimposingManagerImpl.PROPERTY_KEY_OLD_OBSERVATION_PATHS)).thenReturn(new String[] { OBSERVATION_PATH });
         when(resourceResolverFactory.getAdministrativeResourceResolver(any(Map.class))).thenReturn(resourceResolver);
         when(resourceResolver.adaptTo(Session.class)).thenReturn(session);
 
@@ -168,7 +168,7 @@ public class SuperimposingManagerImplTest {
     }
 
     private void initialize(boolean enabled) throws InterruptedException, LoginException, RepositoryException {
-        underTest.activate();
+        underTest.activate(new HashMap<String, Object>());
 
         if (underTest.isEnabled()) {
             // verify observation registration

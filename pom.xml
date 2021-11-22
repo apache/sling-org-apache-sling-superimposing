@@ -20,7 +20,7 @@
     <parent>
         <groupId>org.apache.sling</groupId>
         <artifactId>sling-bundle-parent</artifactId>
-        <version>39</version>
+        <version>46</version>
         <relativePath />
     </parent>
 
@@ -40,21 +40,17 @@
         <url>https://gitbox.apache.org/repos/asf?p=sling-org-apache-sling-superimposing.git</url>
     </scm>
 
+    <properties>
+         <sling.java.version>8</sling.java.version>
+         <project.build.outputTimestamp>2020-01-22T15:10:38Z</project.build.outputTimestamp>
+    </properties>
+
     <build>
         <plugins>
             <!-- Maven Sling Plugin -->
             <plugin>
                 <groupId>org.apache.sling</groupId>
                 <artifactId>sling-maven-plugin</artifactId>
-            </plugin>
-            <!-- BND Maven Plugin -->
-            <plugin>
-                <groupId>biz.aQute.bnd</groupId>
-                <artifactId>bnd-maven-plugin</artifactId>
-            </plugin>
-            <plugin>
-                <groupId>biz.aQute.bnd</groupId>
-                <artifactId>bnd-baseline-maven-plugin</artifactId>
             </plugin>
         </plugins>
     </build>
@@ -78,48 +74,44 @@
             <version>1.0.0</version>
             <scope>provided</scope>
         </dependency>
-		<dependency>
-			<groupId>org.apache.commons</groupId>
-			<artifactId>commons-lang3</artifactId>
-            <version>3.6</version>
-		</dependency>
         <dependency>
-			<groupId>org.apache.commons</groupId>
-			<artifactId>commons-collections4</artifactId>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>3.6</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-collections4</artifactId>
             <version>4.1</version>
-		</dependency>
+            <scope>provided</scope>
+        </dependency>
         <!-- OSGi Dependencies -->
-		<dependency>
-		    <groupId>org.osgi</groupId>
-		    <artifactId>org.osgi.service.component.annotations</artifactId>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.component.annotations</artifactId>
             <scope>provided</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.osgi</groupId>
-			<artifactId>org.osgi.service.metatype.annotations</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.metatype.annotations</artifactId>
             <scope>provided</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.osgi</groupId>
-			<artifactId>osgi.annotation</artifactId>
-            <version>6.0.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.annotation.versioning</artifactId>
             <scope>provided</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.osgi</groupId>
-			<artifactId>osgi.core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.framework</artifactId>
             <scope>provided</scope>
-		</dependency>
-		<dependency>
-		    <groupId>org.osgi</groupId>
-		    <artifactId>org.osgi.service.component</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+                <artifactId>org.osgi.service.component</artifactId>
             <scope>provided</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.osgi</groupId>
-			<artifactId>osgi.cmpn</artifactId>
-            <scope>provided</scope>
-		</dependency>
+        </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>

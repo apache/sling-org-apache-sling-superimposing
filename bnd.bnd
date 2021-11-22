@@ -1,9 +1,1 @@
-Bundle-Description: ${project.description}
-
-Export-Package: org.apache.sling.superimposing
-
-Private-Package: org.apache.sling.superimposing.impl
-
-DynamicImport-Package: org.apache.felix.webconsole
-
 Sling-Nodetypes: SLING-INF/nodetypes/superimposing.cnd

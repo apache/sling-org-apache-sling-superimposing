@@ -19,14 +19,13 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>org.apache.sling</groupId>
-        <artifactId>sling</artifactId>
-        <version>26</version>
-        <relativePath/>
+        <artifactId>sling-bundle-parent</artifactId>
+        <version>46</version>
+        <relativePath />
     </parent>
 
     <artifactId>org.apache.sling.superimposing</artifactId>
     <version>0.2.1-SNAPSHOT</version>
-    <packaging>bundle</packaging>
 
     <name>Apache Sling Superimposing Resource Provider</name>
     <description>
@@ -41,33 +40,18 @@
         <url>https://gitbox.apache.org/repos/asf?p=sling-org-apache-sling-superimposing.git</url>
     </scm>
 
+    <properties>
+         <sling.java.version>8</sling.java.version>
+         <project.build.outputTimestamp>2020-01-22T15:10:38Z</project.build.outputTimestamp>
+    </properties>
+
     <build>
         <plugins>
-
-            <plugin>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>maven-scr-plugin</artifactId>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>maven-bundle-plugin</artifactId>
-                <extensions>true</extensions>
-                <configuration>
-                    <instructions>
-                        <Export-Package>org.apache.sling.superimposing</Export-Package>
-                        <Private-Package>org.apache.sling.superimposing.impl</Private-Package>
-                        <DynamicImport-Package>org.apache.felix.webconsole</DynamicImport-Package>
-                        <Sling-Nodetypes>SLING-INF/nodetypes/superimposing.cnd</Sling-Nodetypes>
-                    </instructions>
-                </configuration>
-            </plugin>
-
+            <!-- Maven Sling Plugin -->
             <plugin>
                 <groupId>org.apache.sling</groupId>
-                <artifactId>maven-sling-plugin</artifactId>
+                <artifactId>sling-maven-plugin</artifactId>
             </plugin>
-
         </plugins>
     </build>
 
@@ -90,73 +74,70 @@
             <version>1.0.0</version>
             <scope>provided</scope>
         </dependency>
-
         <dependency>
-            <groupId>commons-lang</groupId>
-            <artifactId>commons-lang</artifactId>
-            <version>2.4</version>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>3.6</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>commons-collections</groupId>
-            <artifactId>commons-collections</artifactId>
-            <version>3.1</version>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-collections4</artifactId>
+            <version>4.1</version>
             <scope>provided</scope>
         </dependency>
-
+        <!-- OSGi Dependencies -->
         <dependency>
             <groupId>org.osgi</groupId>
-            <artifactId>org.osgi.core</artifactId>
-            <scope>compile</scope>
+            <artifactId>org.osgi.service.component.annotations</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.osgi</groupId>
-            <artifactId>org.osgi.compendium</artifactId>
-            <scope>compile</scope>
+            <artifactId>org.osgi.service.metatype.annotations</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.annotation.versioning</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.framework</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+                <artifactId>org.osgi.service.component</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
-            <scope>compile</scope>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>javax.servlet</groupId>
-            <artifactId>servlet-api</artifactId>
-            <scope>compile</scope>
+            <artifactId>javax.servlet-api</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>javax.jcr</groupId>
             <artifactId>jcr</artifactId>
-            <version>2.0</version>
             <scope>compile</scope>
         </dependency>
-
-        <dependency>
-            <groupId>org.apache.felix</groupId>
-            <artifactId>org.apache.felix.scr.annotations</artifactId>
-            <scope>compile</scope>
-        </dependency>
-
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <scope>test</scope>
         </dependency>
-
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-all</artifactId>
             <version>1.9.5</version>
             <scope>test</scope>
         </dependency>
-
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-nop</artifactId>
-            <version>1.5.2</version>
-            <scope>test</scope>
-        </dependency>
-
     </dependencies>
 
 </project>

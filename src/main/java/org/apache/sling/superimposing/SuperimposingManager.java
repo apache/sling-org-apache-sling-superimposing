@@ -27,7 +27,6 @@ import org.apache.sling.superimposing.impl.SuperimposingResourceProviderImpl;
  * Provides read-only access to all registered providers.
  */
 public interface SuperimposingManager {
-
     /**
      * @return true if superimposing mode is enabled.
      */

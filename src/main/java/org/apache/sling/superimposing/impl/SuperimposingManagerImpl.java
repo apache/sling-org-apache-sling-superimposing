@@ -22,7 +22,8 @@ import static org.apache.sling.superimposing.SuperimposingResourceProvider.PROP_
 import static org.apache.sling.superimposing.SuperimposingResourceProvider.PROP_SUPERIMPOSE_SOURCE_PATH;
 
 import java.util.ArrayList;
-import java.util.Dictionary;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -31,6 +32,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.stream.Collectors;
 
 import javax.jcr.RepositoryException;
 import javax.jcr.Session;
@@ -38,15 +40,8 @@ import javax.jcr.observation.Event;
 import javax.jcr.observation.EventIterator;
 import javax.jcr.observation.EventListener;
 
-import org.apache.commons.collections.IteratorUtils;
-import org.apache.commons.lang.StringUtils;
-import org.apache.felix.scr.annotations.Activate;
-import org.apache.felix.scr.annotations.Component;
-import org.apache.felix.scr.annotations.Deactivate;
-import org.apache.felix.scr.annotations.Property;
-import org.apache.felix.scr.annotations.PropertyUnbounded;
-import org.apache.felix.scr.annotations.Reference;
-import org.apache.felix.scr.annotations.Service;
+import org.apache.commons.collections4.IteratorUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.resource.LoginException;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
@@ -56,7 +51,15 @@ import org.apache.sling.commons.osgi.PropertiesUtil;
 import org.apache.sling.superimposing.SuperimposingManager;
 import org.apache.sling.superimposing.SuperimposingResourceProvider;
 import org.osgi.framework.BundleContext;
+import org.osgi.framework.FrameworkUtil;
 import org.osgi.service.component.ComponentContext;
+import org.osgi.service.component.annotations.Activate;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Deactivate;
+import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.metatype.annotations.AttributeDefinition;
+import org.osgi.service.metatype.annotations.Designate;
+import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,39 +67,42 @@ import org.slf4j.LoggerFactory;
  * Manages the resource registrations for the {@link SuperimposingResourceProviderImpl}.
  * Provides read-only access to all registered providers.
  */
-@Component(label = "Apache Sling Superimposing Resource Manager",
-    description = "Manages the resource registrations for the Superimposing Resource Provider.",
-    immediate = true, metatype = true)
-@Service(SuperimposingManager.class)
+@Component(service = SuperimposingManager.class, immediate = true)
+@Designate(ocd = SuperimposingManagerImpl.Config.class)
 public class SuperimposingManagerImpl implements SuperimposingManager, EventListener {
 
-    @Property(label = "Enabled", description = "Enable/Disable the superimposing functionality.", boolValue = SuperimposingManagerImpl.ENABLED_DEFAULT)
-    static final String ENABLED_PROPERTY = "enabled";
-    static final boolean ENABLED_DEFAULT = false;
+    
+    @ObjectClassDefinition(name = "Apache Sling Superimposing Resource Manager", description = "Manages the resource registrations for the Superimposing Resource Provider.", id = "org.apache.sling.superimposing.impl.SuperimposingManagerImpl")
+    @interface Config {
+        
+        @AttributeDefinition(name = "Enable superimposition", description = "Enable/Disable the superimposing functionality")
+        boolean enabled() default false;
+        
+        @AttributeDefinition(name = "Observation paths", description = "List of paths that should be monitored for resource events to detect superimposing content nodes.")
+        String [] observationPaths() default "/content";
+
+        @AttributeDefinition(name = "Find all Queries", description = "List of query expressions to find all existing superimposing registrations on service startup. Query syntax is depending on underlying resource provdider implementation. Prepend the query with query syntax name separated by \"|\".")
+        String [] findAllQueries() default "JCR-SQL2|SELECT * FROM [" + MIXIN_SUPERIMPOSE + "] WHERE ISDESCENDANTNODE('/content')";
+    }
+
+    public static final String PATH_SEPARATOR = "/";
+    
     private boolean enabled;
 
-    @Property(label = "Find all Queries", description = "List of query expressions to find all existing superimposing registrations on service startup. "
-            + "Query syntax is depending on underlying resource provdider implementation. Prepend the query with query syntax name separated by \"|\".",
-            value={SuperimposingManagerImpl.FINDALLQUERIES_DEFAULT}, unbounded=PropertyUnbounded.ARRAY)
-    static final String FINDALLQUERIES_PROPERTY = "findAllQueries";
-    static final String FINDALLQUERIES_DEFAULT = "JCR-SQL2|SELECT * FROM [" + MIXIN_SUPERIMPOSE + "] WHERE ISDESCENDANTNODE('/content')";
     private String[] findAllQueries;
-
-    @Property(label = "Obervation paths", description = "List of paths that should be monitored for resource events to detect superimposing content nodes.",
-            value={SuperimposingManagerImpl.OBSERVATION_PATHS_DEFAULT}, unbounded=PropertyUnbounded.ARRAY)
-    static final String OBSERVATION_PATHS_PROPERTY = "obervationPaths";
-    static final String OBSERVATION_PATHS_DEFAULT = "/content";
-    private String[] obervationPaths;
     private EventListener[] observationEventListeners;
-
+    
     /**
      * Map for holding the superimposing mappings, with the superimpose path as key and the providers as values
      */
-    private ConcurrentMap<String, SuperimposingResourceProviderImpl> superimposingProviders = new ConcurrentHashMap<String, SuperimposingResourceProviderImpl>();
+    private ConcurrentMap<String, SuperimposingResourceProviderImpl> superimposingProviders = new ConcurrentHashMap<>();
 
     @Reference
     private ResourceResolverFactory resolverFactory;
 
+    @Activate
+    private Config config;
+    
     /**
      * Administrative resource resolver (read only usage)
      */
@@ -117,20 +123,20 @@ public class SuperimposingManagerImpl implements SuperimposingManager, EventList
      * The default logger
      */
     private static final Logger log = LoggerFactory.getLogger(SuperimposingManagerImpl.class);
-
-
+    static final String PROPERTY_KEY_OLD_OBSERVATION_PATHS = "obervationPaths";
+    private static final String PROPERTY_KEY_OBSERVATION_PATHS = "observationPaths";
+    
     /**
      * Find all existing superimposing registrations using all query defined in service configuration.
      * @param resolver Resource resolver
      * @return All superimposing registrations
      */
-    @SuppressWarnings("unchecked")
     private List<Resource> findSuperimposings(ResourceResolver resolver) {
-        List<Resource> allResources = new ArrayList<Resource>();
+        List<Resource> allResources = new ArrayList<>();
         for (String queryString : this.findAllQueries) {
             if (!StringUtils.contains(queryString, "|")) {
                 throw new IllegalArgumentException("Query string does not contain query syntax seperated by '|': " + queryString);
-            }
+          }
             String queryLanguage = StringUtils.substringBefore(queryString, "|");
             String query = StringUtils.substringAfter(queryString, "|");
             allResources.addAll(IteratorUtils.toList(resolver.findResources(query, queryLanguage)));
@@ -139,7 +145,7 @@ public class SuperimposingManagerImpl implements SuperimposingManager, EventList
     }
 
     private void registerAllSuperimposings() {
-        log.debug("Start registering all superimposing trees...");
+        log.info("Start registering all superimposing trees...");
         final long start = System.currentTimeMillis();
         long countSuccess = 0;
         long countFailed = 0;
@@ -155,8 +161,7 @@ public class SuperimposingManagerImpl implements SuperimposingManager, EventList
         }
 
         final long time = System.currentTimeMillis() - start;
-        log.info("Registered {} SuperimposingResourceProvider(s) in {} ms, skipping {} invalid one(s).",
-                new Object[] { countSuccess, time, countFailed });
+        log.info("Registered {} SuperimposingResourceProvider(s) in {} ms, skipping {} invalid one(s).", countSuccess, time, countFailed);
     }
 
     /**
@@ -184,8 +189,8 @@ public class SuperimposingManagerImpl implements SuperimposingManager, EventList
             }
             // target path is not valid if it equals to a parent or child of the superimposing path, or to the superimposing path itself
             if (StringUtils.equals(sourcePath, superimposePath)
-                    || StringUtils.startsWith(sourcePath, superimposePath + "/")
-                    || StringUtils.startsWith(superimposePath, sourcePath + "/")) {
+                    || StringUtils.startsWith(sourcePath, superimposePath + PATH_SEPARATOR)
+                    || StringUtils.startsWith(superimposePath, sourcePath + PATH_SEPARATOR)) {
                 valid = false;
             }
         }
@@ -222,7 +227,7 @@ public class SuperimposingManagerImpl implements SuperimposingManager, EventList
     }
 
     private String getJcrStringProperty(String pNodePath, String pPropertName) {
-        String absolutePropertyPath = pNodePath + "/" + pPropertName;
+        String absolutePropertyPath = pNodePath + PATH_SEPARATOR + pPropertName;
         Session session = resolver.adaptTo(Session.class);
         try {
             if (!session.itemExists(absolutePropertyPath)) {
@@ -236,7 +241,7 @@ public class SuperimposingManagerImpl implements SuperimposingManager, EventList
     }
 
     private boolean getJcrBooleanProperty(String pNodePath, String pPropertName) {
-        String absolutePropertyPath = pNodePath + "/" + pPropertName;
+        String absolutePropertyPath = pNodePath + PATH_SEPARATOR + pPropertName;
         Session session = resolver.adaptTo(Session.class);
         try {
             if (!session.itemExists(absolutePropertyPath)) {
@@ -266,59 +271,55 @@ public class SuperimposingManagerImpl implements SuperimposingManager, EventList
     // ---------- SCR Integration
 
     @Activate
-    protected synchronized void activate(final ComponentContext ctx) throws LoginException, RepositoryException {
+    protected synchronized void activate(Map<String, Object> properties) throws LoginException, RepositoryException {
 
         // check enabled state
-        @SuppressWarnings("unchecked")
-        final Dictionary<String, Object> props = ctx.getProperties();
-        this.enabled = PropertiesUtil.toBoolean(props.get(ENABLED_PROPERTY), ENABLED_DEFAULT);
-        log.debug("Config: " + "Enabled={} ", enabled);
+        this.enabled = config.enabled();
+        log.info("Config: Enabled={} ", enabled);
         if (!isEnabled()) {
             return;
         }
-
+        Collection<String> observationPaths = new ArrayList<>(Arrays.asList(config.observationPaths()));
+        // merge with old configuration property key (with typo)
+        if (properties.containsKey(PROPERTY_KEY_OLD_OBSERVATION_PATHS)) {
+            log.warn("Using deprecated configuration property {}, please switch to the new key {}", PROPERTY_KEY_OLD_OBSERVATION_PATHS, PROPERTY_KEY_OBSERVATION_PATHS);
+            observationPaths.addAll(Arrays.asList(PropertiesUtil.toStringArray(properties.get(PROPERTY_KEY_OLD_OBSERVATION_PATHS))));
+        }
         // get "find all" queries
-        this.findAllQueries = PropertiesUtil.toStringArray(props.get(FINDALLQUERIES_PROPERTY), new String[] { FINDALLQUERIES_DEFAULT });
-        this.obervationPaths = PropertiesUtil.toStringArray(props.get(OBSERVATION_PATHS_PROPERTY), new String[] { OBSERVATION_PATHS_DEFAULT });
+        this.findAllQueries = config.findAllQueries();
 
         if (null == resolver) {
-            bundleContext = ctx.getBundleContext();
+            bundleContext = FrameworkUtil.getBundle(this.getClass()).getBundleContext();
             resolver = resolverFactory.getAdministrativeResourceResolver(null);
-
-            // Watch for events on the root to register/deregister superimposings at runtime
-            // For each observed path create an event listener object which redirects the event to the main class
-            final Session session = resolver.adaptTo(Session.class);
-            if (session!=null) {
-                this.observationEventListeners = new EventListener[this.obervationPaths.length];
-                for (int i=0; i<this.obervationPaths.length; i++) {
-                    this.observationEventListeners[i] = new EventListener() {
-                        public void onEvent(EventIterator events) {
-                            SuperimposingManagerImpl.this.onEvent(events);
-                        }
-                    };
-                    session.getWorkspace().getObservationManager().addEventListener(
-                            this.observationEventListeners[i],
-                            Event.NODE_ADDED | Event.NODE_REMOVED | Event.PROPERTY_ADDED | Event.PROPERTY_CHANGED | Event.PROPERTY_REMOVED,
-                            this.obervationPaths[i], // absolute path
-                            true, // isDeep
-                            null, // uuids
-                            null, // node types
-                            true); // noLocal
-                }
-            }
-
-            // register all superimposing definitions that already exist
-            initialization = Executors.newSingleThreadExecutor().submit(new Runnable() {
-                public void run() {
-                    try {
-                        registerAllSuperimposings();
-                    }
-                    catch (Throwable ex) {
-                        log.warn("Error registering existing superimposing resources on service startup.", ex);
-                    }
-                }
-            });
         }
+        // Watch for events on the root to register/deregister superimposings at runtime
+        // For each observed path create an event listener object which redirects the event to the main class
+        final Session session = resolver.adaptTo(Session.class);
+        if (session!=null) {
+            this.observationEventListeners = new EventListener[observationPaths.size()];
+            int i=0;
+            for (String observationPath : observationPaths) {
+                this.observationEventListeners[i] = this;
+                session.getWorkspace().getObservationManager().addEventListener(
+                        this.observationEventListeners[i++],
+                        Event.NODE_ADDED | Event.NODE_REMOVED | Event.PROPERTY_ADDED | Event.PROPERTY_CHANGED | Event.PROPERTY_REMOVED,
+                        observationPath, // absolute path
+                        true, // isDeep
+                        null, // uuids
+                        null, // node types
+                        true); // noLocal
+            }
+        }
+
+        // register all superimposing definitions that already exist
+        initialization = Executors.newSingleThreadExecutor().submit(() -> {
+            try {
+                registerAllSuperimposings();
+            }
+            catch (Exception ex) {
+                log.warn("Error registering existing superimposing resources on service startup.", ex);
+            }
+        });
     }
 
     @Deactivate
@@ -363,7 +364,7 @@ public class SuperimposingManagerImpl implements SuperimposingManager, EventList
         }
         try {
             // collect all actions to be performed for this event
-            final Map<String, Boolean> actions = new HashMap<String, Boolean>();
+            final Map<String, Boolean> actions = new HashMap<>();
             boolean nodeAdded = false;
             boolean nodeRemoved = false;
             while (events.hasNext()) {
@@ -414,17 +415,13 @@ public class SuperimposingManagerImpl implements SuperimposingManager, EventList
 
     /**
      * @return Iterator with all superimposing resource providers currently registered.
-     *   Iterator is backed by a {@link java.util.concurrent.ConcurrentHashMap} and is safe to access
+     *   Iterator is backed by a {@link ConcurrentHashMap} and is safe to access
      *   even if superimposing resource providers are registered or unregistered at the same time.
      */
-    @SuppressWarnings("unchecked")
     public Iterator<SuperimposingResourceProvider> getRegisteredProviders() {
-        return IteratorUtils.unmodifiableIterator(superimposingProviders.values().iterator());
-    }
-
-    SuperimposingManagerImpl withResourceResolverFactory(ResourceResolverFactory resolverFactory) {
-        this.resolverFactory = resolverFactory;
-        return this;
+        List<SuperimposingResourceProvider> resourceProviders = superimposingProviders.values().stream()
+                .map(srp -> (SuperimposingResourceProvider) srp).collect(Collectors.toList());
+        return IteratorUtils.unmodifiableIterator(resourceProviders.iterator());
     }
 
 }

@@ -18,12 +18,6 @@
  */
 package org.apache.sling.superimposing.impl;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.when;
-
 import org.apache.sling.api.adapter.AdapterManager;
 import org.apache.sling.api.adapter.SlingAdaptable;
 import org.apache.sling.api.resource.Resource;
@@ -35,6 +29,12 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.when;
+
 @RunWith(MockitoJUnitRunner.class)
 public class SuperimposingResourceTest {
 
@@ -42,8 +42,10 @@ public class SuperimposingResourceTest {
 
     @Mock
     private Resource originalResource;
+
     @Mock
     private ResourceResolver resourceResolver;
+
     private ResourceMetadata resourceMetadata = new ResourceMetadata();
 
     private static final String ORIGINAL_PATH = "/root/path1";
@@ -78,8 +80,8 @@ public class SuperimposingResourceTest {
         SlingAdaptable.setAdapterManager(new AdapterManager() {
             @SuppressWarnings("unchecked")
             public <AdapterType> AdapterType getAdapter(Object adaptable, Class<AdapterType> type) {
-                if (adaptable instanceof SuperimposingResource && type==String.class) {
-                    return (AdapterType)"mystring";
+                if (adaptable instanceof SuperimposingResource && type == String.class) {
+                    return (AdapterType) "mystring";
                 }
                 return null;
             }
@@ -88,8 +90,7 @@ public class SuperimposingResourceTest {
         when(this.originalResource.adaptTo(Integer.class)).thenReturn(12345);
 
         assertEquals("mystring", underTest.adaptTo(String.class));
-        assertEquals((Integer)12345, underTest.adaptTo(Integer.class));
+        assertEquals((Integer) 12345, underTest.adaptTo(Integer.class));
         assertNull(underTest.adaptTo(Boolean.class));
     }
-
 }

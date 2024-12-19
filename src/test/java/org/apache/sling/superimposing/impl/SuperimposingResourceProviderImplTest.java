@@ -18,24 +18,12 @@
  */
 package org.apache.sling.superimposing.impl;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import javax.jcr.RepositoryException;
+import javax.jcr.Session;
 
 import java.util.Arrays;
 import java.util.Dictionary;
 import java.util.Iterator;
-
-import javax.jcr.RepositoryException;
-import javax.jcr.Session;
 
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceMetadata;
@@ -52,6 +40,18 @@ import org.mockito.stubbing.Answer;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceRegistration;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 @RunWith(MockitoJUnitRunner.class)
 public class SuperimposingResourceProviderImplTest {
 
@@ -60,16 +60,22 @@ public class SuperimposingResourceProviderImplTest {
 
     @Mock
     private BundleContext bundleContext;
+
     @Mock
     private ServiceRegistration serviceRegistration;
+
     @Mock
     private ServiceRegistration serviceRegistrationOverlay;
+
     @Mock
     private ResourceResolver resourceResolver;
+
     @Mock
     private Session session;
+
     @Mock
     private Resource originalRootResource;
+
     @Mock
     private Resource originalSubResource;
 
@@ -81,12 +87,14 @@ public class SuperimposingResourceProviderImplTest {
     public void setUp() {
         // setup a superimposing resource provider without overlay
         underTest = new SuperimposingResourceProviderImpl(SUPERIMPOSED_PATH, ORIGINAL_PATH, false);
-        when(bundleContext.registerService(anyString(), eq(underTest), any(Dictionary.class))).thenReturn(serviceRegistration);
+        when(bundleContext.registerService(anyString(), eq(underTest), any(Dictionary.class)))
+                .thenReturn(serviceRegistration);
         underTest.registerService(bundleContext);
 
         // and one with overlay
         underTestOverlay = new SuperimposingResourceProviderImpl(SUPERIMPOSED_PATH, ORIGINAL_PATH, true);
-        when(bundleContext.registerService(anyString(), eq(underTestOverlay), any(Dictionary.class))).thenReturn(serviceRegistrationOverlay);
+        when(bundleContext.registerService(anyString(), eq(underTestOverlay), any(Dictionary.class)))
+                .thenReturn(serviceRegistrationOverlay);
         underTestOverlay.registerService(bundleContext);
 
         // prepare test resources
@@ -94,7 +102,7 @@ public class SuperimposingResourceProviderImplTest {
         prepareOriginalResource(originalSubResource, ORIGINAL_PATH + "/sub1");
         when(resourceResolver.listChildren(originalRootResource)).thenAnswer(new Answer<Iterator<Resource>>() {
             public Iterator<Resource> answer(InvocationOnMock invocation) {
-                return Arrays.asList(new Resource[] { originalSubResource }).iterator();
+                return Arrays.asList(new Resource[] {originalSubResource}).iterator();
             }
         });
     }
@@ -246,5 +254,4 @@ public class SuperimposingResourceProviderImplTest {
         Iterator<Resource> iterator = underTest.listChildren(mock(Resource.class));
         assertNull(iterator);
     }
-
 }

@@ -18,8 +18,11 @@
  */
 package org.apache.sling.superimposing.impl;
 
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.when;
 
 import org.apache.sling.api.adapter.AdapterManager;
 import org.apache.sling.api.adapter.SlingAdaptable;
@@ -30,7 +33,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
-import org.mockito.runners.MockitoJUnitRunner;
+import org.mockito.junit.MockitoJUnitRunner;
 
 @RunWith(MockitoJUnitRunner.class)
 public class SuperimposingResourceTest {
@@ -49,7 +52,7 @@ public class SuperimposingResourceTest {
 
     @Before
     public void setUp() {
-        when(originalResource.getPath()).thenReturn(ORIGINAL_PATH);
+        lenient().when(originalResource.getPath()).thenReturn(ORIGINAL_PATH);
         when(originalResource.getResourceType()).thenReturn(RESOURCE_TYPE);
         when(originalResource.getResourceSuperType()).thenReturn(null);
         when(originalResource.getResourceMetadata()).thenReturn(this.resourceMetadata);
@@ -81,7 +84,7 @@ public class SuperimposingResourceTest {
                 return null;
             }
         });
-        when(this.originalResource.adaptTo(String.class)).thenReturn("myoriginalstring");
+        lenient().when(this.originalResource.adaptTo(String.class)).thenReturn("myoriginalstring");
         when(this.originalResource.adaptTo(Integer.class)).thenReturn(12345);
 
         assertEquals("mystring", underTest.adaptTo(String.class));

@@ -18,8 +18,17 @@
  */
 package org.apache.sling.superimposing.impl;
 
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
 import java.util.Dictionary;
@@ -38,7 +47,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.invocation.InvocationOnMock;
-import org.mockito.runners.MockitoJUnitRunner;
+import org.mockito.junit.MockitoJUnitRunner;
 import org.mockito.stubbing.Answer;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceRegistration;
@@ -93,8 +102,8 @@ public class SuperimposingResourceProviderImplTest {
     private void prepareOriginalResource(Resource mockResource, String path) {
         // prepare resource
         when(mockResource.getPath()).thenReturn(path);
-        when(mockResource.getResourceType()).thenReturn(RESOURCE_TYPE);
-        when(mockResource.getResourceSuperType()).thenReturn(null);
+        lenient().when(mockResource.getResourceType()).thenReturn(RESOURCE_TYPE);
+        lenient().when(mockResource.getResourceSuperType()).thenReturn(null);
         ResourceMetadata resourceMetadata = new ResourceMetadata();
         resourceMetadata.setResolutionPath(path);
         when(mockResource.getResourceMetadata()).thenReturn(resourceMetadata);
@@ -148,8 +157,8 @@ public class SuperimposingResourceProviderImplTest {
 
     @Test
     public void testGetMappedRootResourceWithOverlay() throws RepositoryException {
-        when(resourceResolver.adaptTo(Session.class)).thenReturn(session);
-        when(session.itemExists(SUPERIMPOSED_PATH)).thenReturn(true);
+        lenient().when(resourceResolver.adaptTo(Session.class)).thenReturn(session);
+        lenient().when(session.itemExists(SUPERIMPOSED_PATH)).thenReturn(true);
 
         Resource resource = underTest.getResource(resourceResolver, SUPERIMPOSED_PATH);
         assertTrue(resource instanceof SuperimposingResource);

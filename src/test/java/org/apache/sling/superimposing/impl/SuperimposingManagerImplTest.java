@@ -21,8 +21,21 @@ package org.apache.sling.superimposing.impl;
 import static org.apache.sling.superimposing.SuperimposingResourceProvider.PROP_SUPERIMPOSE_OVERLAYABLE;
 import static org.apache.sling.superimposing.SuperimposingResourceProvider.PROP_SUPERIMPOSE_REGISTER_PARENT;
 import static org.apache.sling.superimposing.SuperimposingResourceProvider.PROP_SUPERIMPOSE_SOURCE_PATH;
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.same;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -48,7 +61,6 @@ import org.apache.sling.api.resource.ResourceResolverFactory;
 import org.apache.sling.api.resource.ResourceUtil;
 import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.wrappers.ValueMapDecorator;
-import org.apache.sling.superimposing.SuperimposingManager;
 import org.apache.sling.superimposing.SuperimposingResourceProvider;
 import org.junit.After;
 import org.junit.Before;
@@ -58,7 +70,7 @@ import org.mockito.Answers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.invocation.InvocationOnMock;
-import org.mockito.runners.MockitoJUnitRunner;
+import org.mockito.junit.MockitoJUnitRunner;
 import org.mockito.stubbing.Answer;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceRegistration;
@@ -93,10 +105,10 @@ public class SuperimposingManagerImplTest {
     @SuppressWarnings("unchecked")
     @Before
     public void setUp() throws LoginException {
-        when(componentContext.getBundleContext()).thenReturn(bundleContext);
-        when(componentContext.getProperties()).thenReturn(componentContextProperties);
-        when(componentContextProperties.get(SuperimposingManagerImpl.PROPERTY_KEY_OLD_OBSERVATION_PATHS)).thenReturn(new String[] { OBSERVATION_PATH });
-        when(resourceResolverFactory.getAdministrativeResourceResolver(any(Map.class))).thenReturn(resourceResolver);
+        lenient().when(componentContext.getBundleContext()).thenReturn(bundleContext);
+        lenient().when(componentContext.getProperties()).thenReturn(componentContextProperties);
+        lenient().when(componentContextProperties.get(SuperimposingManagerImpl.PROPERTY_KEY_OLD_OBSERVATION_PATHS)).thenReturn(new String[] { OBSERVATION_PATH });
+        lenient().when(resourceResolverFactory.getAdministrativeResourceResolver(any(Map.class))).thenReturn(resourceResolver);
         when(resourceResolver.adaptTo(Session.class)).thenReturn(session);
 
         when(config.enabled()).thenReturn(true);
@@ -104,7 +116,7 @@ public class SuperimposingManagerImplTest {
         when(config.observationPaths()).thenReturn(new String[]{OBSERVATION_PATH});
 
         // collect a list of all service registrations to validate that they are all unregistered on shutdown
-        when(bundleContext.registerService(anyString(), anyObject(), any(Dictionary.class))).thenAnswer(new Answer<ServiceRegistration>() {
+        when(bundleContext.registerService(anyString(), any(), any(Dictionary.class))).thenAnswer(new Answer<ServiceRegistration>() {
             public ServiceRegistration answer(InvocationOnMock invocation) {
                 final ServiceRegistration mockRegistration = mock(ServiceRegistration.class);
                 serviceRegistrations.add(mockRegistration);
@@ -147,7 +159,7 @@ public class SuperimposingManagerImplTest {
                             throw new PathNotFoundException();
                         }
                         Property prop = mock(Property.class);
-                        when(prop.getName()).thenReturn(propertyName);
+                        lenient().when(prop.getName()).thenReturn(propertyName);
                         if (value instanceof String) {
                             when(prop.getString()).thenReturn((String)value);
                         }
@@ -172,7 +184,7 @@ public class SuperimposingManagerImplTest {
 
         if (underTest.isEnabled()) {
             // verify observation registration
-            verify(session.getWorkspace().getObservationManager()).addEventListener(any(EventListener.class), anyInt(), eq(OBSERVATION_PATH), anyBoolean(), any(String[].class), any(String[].class), anyBoolean());
+            verify(session.getWorkspace().getObservationManager()).addEventListener(any(EventListener.class), anyInt(), eq(OBSERVATION_PATH), anyBoolean(), any(), any(), anyBoolean());
             // wait until separate initialization thread has finished
             while (!underTest.initialization.isDone()) {
                 Thread.sleep(10);
@@ -211,7 +223,7 @@ public class SuperimposingManagerImplTest {
     private void moveSuperimposedResource(Resource resource, String newPath) {
         String oldPath = resource.getPath();
         when(resource.getPath()).thenReturn(newPath);
-        when(resourceResolver.getResource(oldPath)).thenReturn(null);
+        lenient().when(resourceResolver.getResource(oldPath)).thenReturn(null);
         when(resourceResolver.getResource(newPath)).thenReturn(resource);
     }
 
@@ -220,8 +232,8 @@ public class SuperimposingManagerImplTest {
         // make sure that no exception is thrown when service is disabled on activate/deactivate
         initialize(false);
 
-        verifyZeroInteractions(resourceResolverFactory);
-        verifyZeroInteractions(bundleContext);
+        verifyNoInteractions(resourceResolverFactory);
+        verifyNoInteractions(bundleContext);
     }
 
     @SuppressWarnings("unchecked")

@@ -1,25 +1,28 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 package org.apache.sling.superimposing.impl;
 
-import static org.apache.sling.superimposing.SuperimposingResourceProvider.MIXIN_SUPERIMPOSE;
-import static org.apache.sling.superimposing.SuperimposingResourceProvider.PROP_SUPERIMPOSE_OVERLAYABLE;
-import static org.apache.sling.superimposing.SuperimposingResourceProvider.PROP_SUPERIMPOSE_REGISTER_PARENT;
-import static org.apache.sling.superimposing.SuperimposingResourceProvider.PROP_SUPERIMPOSE_SOURCE_PATH;
+import javax.jcr.RepositoryException;
+import javax.jcr.Session;
+import javax.jcr.observation.Event;
+import javax.jcr.observation.EventIterator;
+import javax.jcr.observation.EventListener;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -33,12 +36,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
-
-import javax.jcr.RepositoryException;
-import javax.jcr.Session;
-import javax.jcr.observation.Event;
-import javax.jcr.observation.EventIterator;
-import javax.jcr.observation.EventListener;
 
 import org.apache.commons.collections4.IteratorUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -63,6 +60,11 @@ import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.sling.superimposing.SuperimposingResourceProvider.MIXIN_SUPERIMPOSE;
+import static org.apache.sling.superimposing.SuperimposingResourceProvider.PROP_SUPERIMPOSE_OVERLAYABLE;
+import static org.apache.sling.superimposing.SuperimposingResourceProvider.PROP_SUPERIMPOSE_REGISTER_PARENT;
+import static org.apache.sling.superimposing.SuperimposingResourceProvider.PROP_SUPERIMPOSE_SOURCE_PATH;
+
 /**
  * Manages the resource registrations for the {@link SuperimposingResourceProviderImpl}.
  * Provides read-only access to all registered providers.
@@ -71,27 +73,38 @@ import org.slf4j.LoggerFactory;
 @Designate(ocd = SuperimposingManagerImpl.Config.class)
 public class SuperimposingManagerImpl implements SuperimposingManager, EventListener {
 
-    
-    @ObjectClassDefinition(name = "Apache Sling Superimposing Resource Manager", description = "Manages the resource registrations for the Superimposing Resource Provider.", id = "org.apache.sling.superimposing.impl.SuperimposingManagerImpl")
+    @ObjectClassDefinition(
+            name = "Apache Sling Superimposing Resource Manager",
+            description = "Manages the resource registrations for the Superimposing Resource Provider.",
+            id = "org.apache.sling.superimposing.impl.SuperimposingManagerImpl")
     @interface Config {
-        
-        @AttributeDefinition(name = "Enable superimposition", description = "Enable/Disable the superimposing functionality")
-        boolean enabled() default false;
-        
-        @AttributeDefinition(name = "Observation paths", description = "List of paths that should be monitored for resource events to detect superimposing content nodes.")
-        String [] observationPaths() default "/content";
 
-        @AttributeDefinition(name = "Find all Queries", description = "List of query expressions to find all existing superimposing registrations on service startup. Query syntax is depending on underlying resource provdider implementation. Prepend the query with query syntax name separated by \"|\".")
-        String [] findAllQueries() default "JCR-SQL2|SELECT * FROM [" + MIXIN_SUPERIMPOSE + "] WHERE ISDESCENDANTNODE('/content')";
+        @AttributeDefinition(
+                name = "Enable superimposition",
+                description = "Enable/Disable the superimposing functionality")
+        boolean enabled() default false;
+
+        @AttributeDefinition(
+                name = "Observation paths",
+                description =
+                        "List of paths that should be monitored for resource events to detect superimposing content nodes.")
+        String[] observationPaths() default "/content";
+
+        @AttributeDefinition(
+                name = "Find all Queries",
+                description =
+                        "List of query expressions to find all existing superimposing registrations on service startup. Query syntax is depending on underlying resource provdider implementation. Prepend the query with query syntax name separated by \"|\".")
+        String[] findAllQueries() default
+                "JCR-SQL2|SELECT * FROM [" + MIXIN_SUPERIMPOSE + "] WHERE ISDESCENDANTNODE('/content')";
     }
 
     public static final String PATH_SEPARATOR = "/";
-    
+
     private boolean enabled;
 
     private String[] findAllQueries;
     private EventListener[] observationEventListeners;
-    
+
     /**
      * Map for holding the superimposing mappings, with the superimpose path as key and the providers as values
      */
@@ -102,7 +115,7 @@ public class SuperimposingManagerImpl implements SuperimposingManager, EventList
 
     @Activate
     private Config config;
-    
+
     /**
      * Administrative resource resolver (read only usage)
      */
@@ -123,9 +136,10 @@ public class SuperimposingManagerImpl implements SuperimposingManager, EventList
      * The default logger
      */
     private static final Logger log = LoggerFactory.getLogger(SuperimposingManagerImpl.class);
+
     static final String PROPERTY_KEY_OLD_OBSERVATION_PATHS = "obervationPaths";
     private static final String PROPERTY_KEY_OBSERVATION_PATHS = "observationPaths";
-    
+
     /**
      * Find all existing superimposing registrations using all query defined in service configuration.
      * @param resolver Resource resolver
@@ -135,8 +149,9 @@ public class SuperimposingManagerImpl implements SuperimposingManager, EventList
         List<Resource> allResources = new ArrayList<>();
         for (String queryString : this.findAllQueries) {
             if (!StringUtils.contains(queryString, "|")) {
-                throw new IllegalArgumentException("Query string does not contain query syntax seperated by '|': " + queryString);
-          }
+                throw new IllegalArgumentException(
+                        "Query string does not contain query syntax seperated by '|': " + queryString);
+            }
             String queryLanguage = StringUtils.substringBefore(queryString, "|");
             String query = StringUtils.substringAfter(queryString, "|");
             allResources.addAll(IteratorUtils.toList(resolver.findResources(query, queryLanguage)));
@@ -161,7 +176,11 @@ public class SuperimposingManagerImpl implements SuperimposingManager, EventList
         }
 
         final long time = System.currentTimeMillis() - start;
-        log.info("Registered {} SuperimposingResourceProvider(s) in {} ms, skipping {} invalid one(s).", countSuccess, time, countFailed);
+        log.info(
+                "Registered {} SuperimposingResourceProvider(s) in {} ms, skipping {} invalid one(s).",
+                countSuccess,
+                time,
+                countFailed);
     }
 
     /**
@@ -172,7 +191,8 @@ public class SuperimposingManagerImpl implements SuperimposingManager, EventList
     private boolean registerProvider(Resource superimposingResource) {
         String superimposePath = superimposingResource.getPath();
 
-        // use JCR API to get properties from superimposing resource to make sure superimposing does not delivery values from source node
+        // use JCR API to get properties from superimposing resource to make sure superimposing does not delivery values
+        // from source node
         final String sourcePath = getJcrStringProperty(superimposePath, PROP_SUPERIMPOSE_SOURCE_PATH);
         final boolean registerParent = getJcrBooleanProperty(superimposePath, PROP_SUPERIMPOSE_REGISTER_PARENT);
         final boolean overlayable = getJcrBooleanProperty(superimposePath, PROP_SUPERIMPOSE_OVERLAYABLE);
@@ -181,13 +201,13 @@ public class SuperimposingManagerImpl implements SuperimposingManager, EventList
         boolean valid = true;
         if (StringUtils.isBlank(sourcePath)) {
             valid = false;
-        }
-        else {
+        } else {
             // check whether the parent of the node should be registered as superimposing provider
             if (registerParent) {
                 superimposePath = ResourceUtil.getParent(superimposePath);
             }
-            // target path is not valid if it equals to a parent or child of the superimposing path, or to the superimposing path itself
+            // target path is not valid if it equals to a parent or child of the superimposing path, or to the
+            // superimposing path itself
             if (StringUtils.equals(sourcePath, superimposePath)
                     || StringUtils.startsWith(sourcePath, superimposePath + PATH_SEPARATOR)
                     || StringUtils.startsWith(superimposePath, sourcePath + PATH_SEPARATOR)) {
@@ -197,7 +217,8 @@ public class SuperimposingManagerImpl implements SuperimposingManager, EventList
 
         // register valid superimposing
         if (valid) {
-            final SuperimposingResourceProviderImpl srp = new SuperimposingResourceProviderImpl(superimposePath, sourcePath, overlayable);
+            final SuperimposingResourceProviderImpl srp =
+                    new SuperimposingResourceProviderImpl(superimposePath, sourcePath, overlayable);
             final SuperimposingResourceProviderImpl oldSrp = superimposingProviders.put(superimposePath, srp);
 
             // unregister in case there was a provider registered before
@@ -209,7 +230,9 @@ public class SuperimposingManagerImpl implements SuperimposingManager, EventList
                 srp.registerService(bundleContext);
                 return true;
             } else {
-                log.debug("Skipped re-registering resource provider {} because there were no relevant changes.", superimposePath);
+                log.debug(
+                        "Skipped re-registering resource provider {} because there were no relevant changes.",
+                        superimposePath);
             }
         }
 
@@ -234,8 +257,7 @@ public class SuperimposingManagerImpl implements SuperimposingManager, EventList
                 return null;
             }
             return session.getProperty(absolutePropertyPath).getString();
-        }
-        catch (RepositoryException ex) {
+        } catch (RepositoryException ex) {
             return null;
         }
     }
@@ -248,8 +270,7 @@ public class SuperimposingManagerImpl implements SuperimposingManager, EventList
                 return false;
             }
             return session.getProperty(absolutePropertyPath).getBoolean();
-        }
-        catch (RepositoryException ex) {
+        } catch (RepositoryException ex) {
             return false;
         }
     }
@@ -282,8 +303,12 @@ public class SuperimposingManagerImpl implements SuperimposingManager, EventList
         Collection<String> observationPaths = new ArrayList<>(Arrays.asList(config.observationPaths()));
         // merge with old configuration property key (with typo)
         if (properties.containsKey(PROPERTY_KEY_OLD_OBSERVATION_PATHS)) {
-            log.warn("Using deprecated configuration property {}, please switch to the new key {}", PROPERTY_KEY_OLD_OBSERVATION_PATHS, PROPERTY_KEY_OBSERVATION_PATHS);
-            observationPaths.addAll(Arrays.asList(PropertiesUtil.toStringArray(properties.get(PROPERTY_KEY_OLD_OBSERVATION_PATHS))));
+            log.warn(
+                    "Using deprecated configuration property {}, please switch to the new key {}",
+                    PROPERTY_KEY_OLD_OBSERVATION_PATHS,
+                    PROPERTY_KEY_OBSERVATION_PATHS);
+            observationPaths.addAll(
+                    Arrays.asList(PropertiesUtil.toStringArray(properties.get(PROPERTY_KEY_OLD_OBSERVATION_PATHS))));
         }
         // get "find all" queries
         this.findAllQueries = config.findAllQueries();
@@ -295,19 +320,25 @@ public class SuperimposingManagerImpl implements SuperimposingManager, EventList
         // Watch for events on the root to register/deregister superimposings at runtime
         // For each observed path create an event listener object which redirects the event to the main class
         final Session session = resolver.adaptTo(Session.class);
-        if (session!=null) {
+        if (session != null) {
             this.observationEventListeners = new EventListener[observationPaths.size()];
-            int i=0;
+            int i = 0;
             for (String observationPath : observationPaths) {
                 this.observationEventListeners[i] = this;
-                session.getWorkspace().getObservationManager().addEventListener(
-                        this.observationEventListeners[i++],
-                        Event.NODE_ADDED | Event.NODE_REMOVED | Event.PROPERTY_ADDED | Event.PROPERTY_CHANGED | Event.PROPERTY_REMOVED,
-                        observationPath, // absolute path
-                        true, // isDeep
-                        null, // uuids
-                        null, // node types
-                        true); // noLocal
+                session.getWorkspace()
+                        .getObservationManager()
+                        .addEventListener(
+                                this.observationEventListeners[i++],
+                                Event.NODE_ADDED
+                                        | Event.NODE_REMOVED
+                                        | Event.PROPERTY_ADDED
+                                        | Event.PROPERTY_CHANGED
+                                        | Event.PROPERTY_REMOVED,
+                                observationPath, // absolute path
+                                true, // isDeep
+                                null, // uuids
+                                null, // node types
+                                true); // noLocal
             }
         }
 
@@ -315,8 +346,7 @@ public class SuperimposingManagerImpl implements SuperimposingManager, EventList
         initialization = Executors.newSingleThreadExecutor().submit(() -> {
             try {
                 registerAllSuperimposings();
-            }
-            catch (Exception ex) {
+            } catch (Exception ex) {
                 log.warn("Error registering existing superimposing resources on service startup.", ex);
             }
         });
@@ -331,9 +361,9 @@ public class SuperimposingManagerImpl implements SuperimposingManager, EventList
             }
 
             // de-register JCR observation
-            if (resolver!=null) {
+            if (resolver != null) {
                 final Session session = resolver.adaptTo(Session.class);
-                if (session!=null && this.observationEventListeners!=null) {
+                if (session != null && this.observationEventListeners != null) {
                     for (EventListener eventListener : this.observationEventListeners) {
                         session.getWorkspace().getObservationManager().removeEventListener(eventListener);
                     }
@@ -420,8 +450,8 @@ public class SuperimposingManagerImpl implements SuperimposingManager, EventList
      */
     public Iterator<SuperimposingResourceProvider> getRegisteredProviders() {
         List<SuperimposingResourceProvider> resourceProviders = superimposingProviders.values().stream()
-                .map(srp -> (SuperimposingResourceProvider) srp).collect(Collectors.toList());
+                .map(srp -> (SuperimposingResourceProvider) srp)
+                .collect(Collectors.toList());
         return IteratorUtils.unmodifiableIterator(resourceProviders.iterator());
     }
-
 }

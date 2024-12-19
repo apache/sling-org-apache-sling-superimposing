@@ -36,5 +36,4 @@ public interface SuperimposingManager {
      *   even if superimposing resource providers are registered or unregistered at the same time.
      */
     Iterator<SuperimposingResourceProvider> getRegisteredProviders();
-
 }

@@ -18,11 +18,6 @@
  */
 package org.apache.sling.superimposing.impl;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.when;
-
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
@@ -33,13 +28,20 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.when;
+
 @RunWith(MockitoJUnitRunner.class)
 public class SuperimposingResourceIteratorTest {
 
     @Mock
     private Iterator<Resource> originalResourceIterator;
+
     @Mock
     private Resource originalResource1;
+
     @Mock
     private Resource originalResource2;
 
@@ -50,7 +52,8 @@ public class SuperimposingResourceIteratorTest {
 
     @Before
     public void setUp() {
-        this.superimposingResourceProvider = new SuperimposingResourceProviderImpl(SUPERIMPOSED_PATH, ORIGINAL_PATH, false);
+        this.superimposingResourceProvider =
+                new SuperimposingResourceProviderImpl(SUPERIMPOSED_PATH, ORIGINAL_PATH, false);
         when(this.originalResource1.getPath()).thenReturn(ORIGINAL_PATH + "/node1");
         when(this.originalResource2.getPath()).thenReturn(ORIGINAL_PATH + "/node2");
     }
@@ -58,20 +61,23 @@ public class SuperimposingResourceIteratorTest {
     @Test
     public void testEmpty() {
         when(this.originalResourceIterator.hasNext()).thenReturn(false);
-        Iterator<Resource> underTest = new SuperimposingResourceIterator(this.superimposingResourceProvider, this.originalResourceIterator);
+        Iterator<Resource> underTest =
+                new SuperimposingResourceIterator(this.superimposingResourceProvider, this.originalResourceIterator);
         assertFalse(underTest.hasNext());
     }
 
-    @Test(expected=NoSuchElementException.class)
+    @Test(expected = NoSuchElementException.class)
     public void testEmptyGetNext() {
         when(this.originalResourceIterator.hasNext()).thenReturn(false);
-        Iterator<Resource> underTest = new SuperimposingResourceIterator(this.superimposingResourceProvider, this.originalResourceIterator);
+        Iterator<Resource> underTest =
+                new SuperimposingResourceIterator(this.superimposingResourceProvider, this.originalResourceIterator);
         underTest.next();
     }
 
-    @Test(expected=UnsupportedOperationException.class)
+    @Test(expected = UnsupportedOperationException.class)
     public void testRemove() {
-        Iterator<Resource> underTest = new SuperimposingResourceIterator(this.superimposingResourceProvider, this.originalResourceIterator);
+        Iterator<Resource> underTest =
+                new SuperimposingResourceIterator(this.superimposingResourceProvider, this.originalResourceIterator);
         underTest.remove();
     }
 
@@ -79,7 +85,8 @@ public class SuperimposingResourceIteratorTest {
     public void testWith2Elements() {
         when(this.originalResourceIterator.hasNext()).thenReturn(true, true, false);
         when(this.originalResourceIterator.next()).thenReturn(this.originalResource1, this.originalResource2, null);
-        Iterator<Resource> underTest = new SuperimposingResourceIterator(this.superimposingResourceProvider, this.originalResourceIterator);
+        Iterator<Resource> underTest =
+                new SuperimposingResourceIterator(this.superimposingResourceProvider, this.originalResourceIterator);
 
         assertTrue(underTest.hasNext());
         assertEquals(SUPERIMPOSED_PATH + "/node1", underTest.next().getPath());
@@ -89,5 +96,4 @@ public class SuperimposingResourceIteratorTest {
 
         assertFalse(underTest.hasNext());
     }
-
 }

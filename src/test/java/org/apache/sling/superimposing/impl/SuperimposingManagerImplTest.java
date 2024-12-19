@@ -18,24 +18,13 @@
  */
 package org.apache.sling.superimposing.impl;
 
-import static org.apache.sling.superimposing.SuperimposingResourceProvider.PROP_SUPERIMPOSE_OVERLAYABLE;
-import static org.apache.sling.superimposing.SuperimposingResourceProvider.PROP_SUPERIMPOSE_REGISTER_PARENT;
-import static org.apache.sling.superimposing.SuperimposingResourceProvider.PROP_SUPERIMPOSE_SOURCE_PATH;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.same;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
+import javax.jcr.PathNotFoundException;
+import javax.jcr.Property;
+import javax.jcr.RepositoryException;
+import javax.jcr.Session;
+import javax.jcr.observation.Event;
+import javax.jcr.observation.EventIterator;
+import javax.jcr.observation.EventListener;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -44,14 +33,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-
-import javax.jcr.PathNotFoundException;
-import javax.jcr.Property;
-import javax.jcr.RepositoryException;
-import javax.jcr.Session;
-import javax.jcr.observation.Event;
-import javax.jcr.observation.EventIterator;
-import javax.jcr.observation.EventListener;
 
 import org.apache.commons.collections4.IteratorUtils;
 import org.apache.sling.api.resource.LoginException;
@@ -76,23 +57,49 @@ import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.component.ComponentContext;
 
+import static org.apache.sling.superimposing.SuperimposingResourceProvider.PROP_SUPERIMPOSE_OVERLAYABLE;
+import static org.apache.sling.superimposing.SuperimposingResourceProvider.PROP_SUPERIMPOSE_REGISTER_PARENT;
+import static org.apache.sling.superimposing.SuperimposingResourceProvider.PROP_SUPERIMPOSE_SOURCE_PATH;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.same;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+
 @RunWith(MockitoJUnitRunner.class)
 public class SuperimposingManagerImplTest {
 
     @Mock
     private Dictionary<String, Object> componentContextProperties;
+
     @Mock
     private ComponentContext componentContext;
+
     @Mock
     private BundleContext bundleContext;
+
     @Mock
     private ResourceResolverFactory resourceResolverFactory;
+
     @Mock
     private SuperimposingManagerImpl.Config config;
+
     @Mock
     private ResourceResolver resourceResolver;
-    @Mock(answer=Answers.RETURNS_DEEP_STUBS)
+
+    @Mock(answer = Answers.RETURNS_DEEP_STUBS)
     private Session session;
+
     private List<ServiceRegistration> serviceRegistrations = new ArrayList<ServiceRegistration>();
 
     @InjectMocks
@@ -107,74 +114,77 @@ public class SuperimposingManagerImplTest {
     public void setUp() throws LoginException {
         lenient().when(componentContext.getBundleContext()).thenReturn(bundleContext);
         lenient().when(componentContext.getProperties()).thenReturn(componentContextProperties);
-        lenient().when(componentContextProperties.get(SuperimposingManagerImpl.PROPERTY_KEY_OLD_OBSERVATION_PATHS)).thenReturn(new String[] { OBSERVATION_PATH });
-        lenient().when(resourceResolverFactory.getAdministrativeResourceResolver(any(Map.class))).thenReturn(resourceResolver);
+        lenient()
+                .when(componentContextProperties.get(SuperimposingManagerImpl.PROPERTY_KEY_OLD_OBSERVATION_PATHS))
+                .thenReturn(new String[] {OBSERVATION_PATH});
+        lenient()
+                .when(resourceResolverFactory.getAdministrativeResourceResolver(any(Map.class)))
+                .thenReturn(resourceResolver);
         when(resourceResolver.adaptTo(Session.class)).thenReturn(session);
 
         when(config.enabled()).thenReturn(true);
-        when(config.findAllQueries()).thenReturn(new String[]{"syntax|query"});
-        when(config.observationPaths()).thenReturn(new String[]{OBSERVATION_PATH});
+        when(config.findAllQueries()).thenReturn(new String[] {"syntax|query"});
+        when(config.observationPaths()).thenReturn(new String[] {OBSERVATION_PATH});
 
         // collect a list of all service registrations to validate that they are all unregistered on shutdown
-        when(bundleContext.registerService(anyString(), any(), any(Dictionary.class))).thenAnswer(new Answer<ServiceRegistration>() {
-            public ServiceRegistration answer(InvocationOnMock invocation) {
-                final ServiceRegistration mockRegistration = mock(ServiceRegistration.class);
-                serviceRegistrations.add(mockRegistration);
-                doAnswer(new Answer() {
-                    public Object answer(InvocationOnMock invocation) {
-                        return serviceRegistrations.remove(mockRegistration);
+        when(bundleContext.registerService(anyString(), any(), any(Dictionary.class)))
+                .thenAnswer(new Answer<ServiceRegistration>() {
+                    public ServiceRegistration answer(InvocationOnMock invocation) {
+                        final ServiceRegistration mockRegistration = mock(ServiceRegistration.class);
+                        serviceRegistrations.add(mockRegistration);
+                        doAnswer(new Answer() {
+                                    public Object answer(InvocationOnMock invocation) {
+                                        return serviceRegistrations.remove(mockRegistration);
+                                    }
+                                })
+                                .when(mockRegistration)
+                                .unregister();
+                        return mockRegistration;
                     }
-                }).when(mockRegistration).unregister();
-                return mockRegistration;
-            }
-        });
+                });
 
         // simulate absolute path access to properties via session object
         try {
             when(session.itemExists(anyString())).thenAnswer(new Answer<Boolean>() {
                 public Boolean answer(InvocationOnMock invocation) throws Throwable {
-                    final String absolutePath = (String)invocation.getArguments()[0];
+                    final String absolutePath = (String) invocation.getArguments()[0];
                     final String nodePath = ResourceUtil.getParent(absolutePath);
                     final String propertyName = ResourceUtil.getName(absolutePath);
                     Resource resource = resourceResolver.getResource(nodePath);
-                    if (resource!=null) {
+                    if (resource != null) {
                         ValueMap props = resource.adaptTo(ValueMap.class);
                         return props.containsKey(propertyName);
-                    }
-                    else {
+                    } else {
                         return false;
                     }
                 }
             });
             when(session.getProperty(anyString())).thenAnswer(new Answer<Property>() {
                 public Property answer(InvocationOnMock invocation) throws Throwable {
-                    final String absolutePath = (String)invocation.getArguments()[0];
+                    final String absolutePath = (String) invocation.getArguments()[0];
                     final String nodePath = ResourceUtil.getParent(absolutePath);
                     final String propertyName = ResourceUtil.getName(absolutePath);
                     Resource resource = resourceResolver.getResource(nodePath);
-                    if (resource!=null) {
+                    if (resource != null) {
                         ValueMap props = resource.adaptTo(ValueMap.class);
                         Object value = props.get(propertyName);
-                        if (value==null) {
+                        if (value == null) {
                             throw new PathNotFoundException();
                         }
                         Property prop = mock(Property.class);
                         lenient().when(prop.getName()).thenReturn(propertyName);
                         if (value instanceof String) {
-                            when(prop.getString()).thenReturn((String)value);
-                        }
-                        else if (value instanceof Boolean) {
-                            when(prop.getBoolean()).thenReturn((Boolean)value);
+                            when(prop.getString()).thenReturn((String) value);
+                        } else if (value instanceof Boolean) {
+                            when(prop.getBoolean()).thenReturn((Boolean) value);
                         }
                         return prop;
-                    }
-                    else {
+                    } else {
                         throw new PathNotFoundException();
                     }
                 }
             });
-        }
-        catch (RepositoryException ex) {
+        } catch (RepositoryException ex) {
             throw new RuntimeException(ex);
         }
     }
@@ -184,7 +194,15 @@ public class SuperimposingManagerImplTest {
 
         if (underTest.isEnabled()) {
             // verify observation registration
-            verify(session.getWorkspace().getObservationManager()).addEventListener(any(EventListener.class), anyInt(), eq(OBSERVATION_PATH), anyBoolean(), any(), any(), anyBoolean());
+            verify(session.getWorkspace().getObservationManager())
+                    .addEventListener(
+                            any(EventListener.class),
+                            anyInt(),
+                            eq(OBSERVATION_PATH),
+                            anyBoolean(),
+                            any(),
+                            any(),
+                            anyBoolean());
             // wait until separate initialization thread has finished
             while (!underTest.initialization.isDone()) {
                 Thread.sleep(10);
@@ -208,7 +226,8 @@ public class SuperimposingManagerImplTest {
         }
     }
 
-    private Resource prepareSuperimposingResource(String superimposedPath, String sourcePath, boolean registerParent, boolean overlayable) {
+    private Resource prepareSuperimposingResource(
+            String superimposedPath, String sourcePath, boolean registerParent, boolean overlayable) {
         Resource resource = mock(Resource.class);
         when(resource.getPath()).thenReturn(superimposedPath);
         ValueMap props = new ValueMapDecorator(new HashMap<String, Object>());
@@ -243,8 +262,9 @@ public class SuperimposingManagerImplTest {
         when(resourceResolver.findResources("query", "syntax")).then(new Answer<Iterator<Resource>>() {
             public Iterator<Resource> answer(InvocationOnMock invocation) {
                 return Arrays.asList(new Resource[] {
-                        prepareSuperimposingResource(SUPERIMPOSED_PATH, ORIGINAL_PATH, false, false)
-                }).iterator();
+                            prepareSuperimposingResource(SUPERIMPOSED_PATH, ORIGINAL_PATH, false, false)
+                        })
+                        .iterator();
             }
         });
         initialize(true);
@@ -268,7 +288,8 @@ public class SuperimposingManagerImplTest {
 
         Event propertyEvent = mock(Event.class);
         when(propertyEvent.getType()).thenReturn(Event.PROPERTY_ADDED);
-        when(propertyEvent.getPath()).thenReturn(resourcePath + "/" + SuperimposingResourceProvider.PROP_SUPERIMPOSE_SOURCE_PATH);
+        when(propertyEvent.getPath())
+                .thenReturn(resourcePath + "/" + SuperimposingResourceProvider.PROP_SUPERIMPOSE_SOURCE_PATH);
 
         EventIterator eventIterator = mock(EventIterator.class);
         when(eventIterator.hasNext()).thenReturn(true, true, false);
@@ -281,7 +302,8 @@ public class SuperimposingManagerImplTest {
 
         Event propertyEvent = mock(Event.class);
         when(propertyEvent.getType()).thenReturn(Event.PROPERTY_CHANGED);
-        when(propertyEvent.getPath()).thenReturn(resourcePath + "/" + SuperimposingResourceProvider.PROP_SUPERIMPOSE_SOURCE_PATH);
+        when(propertyEvent.getPath())
+                .thenReturn(resourcePath + "/" + SuperimposingResourceProvider.PROP_SUPERIMPOSE_SOURCE_PATH);
 
         EventIterator eventIterator = mock(EventIterator.class);
         when(eventIterator.hasNext()).thenReturn(true, false);
@@ -321,7 +343,8 @@ public class SuperimposingManagerImplTest {
 
     @SuppressWarnings("unchecked")
     @Test
-    public void testSuperimposedResourceCreateUpdateRemove() throws InterruptedException, LoginException, RepositoryException {
+    public void testSuperimposedResourceCreateUpdateRemove()
+            throws InterruptedException, LoginException, RepositoryException {
         initialize(true);
 
         // simulate node create event
@@ -364,7 +387,8 @@ public class SuperimposingManagerImplTest {
         initialize(true);
 
         // simulate node create event
-        final Resource superimposedResource = prepareSuperimposingResource(SUPERIMPOSED_PATH, ORIGINAL_PATH, false, false);
+        final Resource superimposedResource =
+                prepareSuperimposingResource(SUPERIMPOSED_PATH, ORIGINAL_PATH, false, false);
         underTest.onEvent(prepareNodeCreateEvent(superimposedResource));
 
         // simulate a node move event
@@ -374,9 +398,7 @@ public class SuperimposingManagerImplTest {
         // prepare a query that returns the moved superimposed resource
         when(resourceResolver.findResources("query", "syntax")).then(new Answer<Iterator<Resource>>() {
             public Iterator<Resource> answer(InvocationOnMock invocation) {
-                return Arrays.asList(new Resource[] {
-                        superimposedResource
-                }).iterator();
+                return Arrays.asList(new Resource[] {superimposedResource}).iterator();
             }
         });
 
@@ -391,5 +413,4 @@ public class SuperimposingManagerImplTest {
         assertFalse(provider.isOverlayable());
         verify(bundleContext).registerService(anyString(), same(provider), any(Dictionary.class));
     }
-
 }

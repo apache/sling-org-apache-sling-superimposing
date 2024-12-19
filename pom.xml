@@ -28,11 +28,9 @@
     <version>0.2.1-SNAPSHOT</version>
 
     <name>Apache Sling Superimposing Resource Provider</name>
-    <description>
-        Allows to mirror resource trees and superimposing resources.
+    <description>Allows to mirror resource trees and superimposing resources.
         All changes from the master tree are reflected to the mirrored tree.
-        It is possible to add or overlay resources in the mirrored tree.
-    </description>
+        It is possible to add or overlay resources in the mirrored tree.</description>
 
     <scm>
         <connection>scm:git:https://gitbox.apache.org/repos/asf/sling-org-apache-sling-superimposing.git</connection>
@@ -41,19 +39,9 @@
     </scm>
 
     <properties>
-         <sling.java.version>8</sling.java.version>
-         <project.build.outputTimestamp>2020-01-22T15:10:38Z</project.build.outputTimestamp>
+        <sling.java.version>8</sling.java.version>
+        <project.build.outputTimestamp>2020-01-22T15:10:38Z</project.build.outputTimestamp>
     </properties>
-
-    <build>
-        <plugins>
-            <!-- Maven Sling Plugin -->
-            <plugin>
-                <groupId>org.apache.sling</groupId>
-                <artifactId>sling-maven-plugin</artifactId>
-            </plugin>
-        </plugins>
-    </build>
 
     <dependencies>
         <dependency>
@@ -109,7 +97,7 @@
         </dependency>
         <dependency>
             <groupId>org.osgi</groupId>
-                <artifactId>org.osgi.service.component</artifactId>
+            <artifactId>org.osgi.service.component</artifactId>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -139,5 +127,15 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <!-- Maven Sling Plugin -->
+            <plugin>
+                <groupId>org.apache.sling</groupId>
+                <artifactId>sling-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>

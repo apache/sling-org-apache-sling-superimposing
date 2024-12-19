@@ -20,8 +20,6 @@ package org.apache.sling.superimposing;
 
 import java.util.Iterator;
 
-import org.apache.sling.superimposing.impl.SuperimposingResourceProviderImpl;
-
 /**
  * Manages the resource registrations for the {@link SuperimposingResourceProviderImpl}.
  * Provides read-only access to all registered providers.
